@@ -43,3 +43,6 @@ scripts/.tmp/
 !public/assets/icons/app-icon.png
 # README 截图
 !docs/screenshots/*.png
+# 官网图片
+!site/assets/*.png
+!site/assets/*.jpg

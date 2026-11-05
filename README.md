@@ -77,7 +77,7 @@ electron/      主进程、内嵌浏览器窗口、preload
 src/           React 前端（工作台、内容流、设置等）
 public/        静态资源与图标
 build/         打包用图标
-tools/cf-worker  Cloudflare Worker 后端（账号与同步）
+site/          官网落地页（静态站点，可部署到 Cloudflare Pages）
 docs/          README 截图
 ```
 
