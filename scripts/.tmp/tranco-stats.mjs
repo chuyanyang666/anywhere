@@ -1,0 +1,10 @@
+import fs from 'fs';
+const rows = fs.readFileSync('scripts/.tmp/tranco/top-1m.csv', 'utf8').trim().split('\n');
+console.log('rows', rows.length, 'first', rows[0]);
+const parse = (n) => rows.slice(0, n).map((l) => l.split(',')[1]);
+const top100k = parse(100000);
+const cn = top100k.filter((d) => /\.(cn|com\.cn|net\.cn|org\.cn)$/.test(d));
+console.log('top100k .cn', cn.length);
+const top5k = parse(5000).filter((d) => /\.(cn|com\.cn)$/.test(d));
+console.log('top5k .cn', top5k.length);
+console.log(cn.slice(0, 30).join('\n'));

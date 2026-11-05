@@ -1,0 +1,11 @@
+import { SITES, CATEGORIES } from '../../src/data/sites.js';
+import fs from 'fs';
+const txt = fs.readFileSync('sites-by-category.csv', 'utf8').replace(/^\uFEFF/, '');
+const lines = txt.split(/\r?\n/).filter((l) => l.trim());
+const rows = lines.slice(1);
+const csvCats = new Set(rows.map((l) => l.split(',')[0].replace(/^"/, '')));
+const siteCats = new Set(SITES.map((s) => s.cat));
+console.log('csv rows:', rows.length, '| SITES:', SITES.length, '| CATEGORIES:', CATEGORIES.length);
+console.log('csv cats:', csvCats.size, '| site cats:', siteCats.size);
+console.log('missing cats:', [...csvCats].filter((c) => !siteCats.has(c)));
+console.log('domains in csv:', new Set(rows.map((l) => l.split(',')[2]?.replace(/^"|"$/g, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''))).size);

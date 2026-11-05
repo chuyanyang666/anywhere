@@ -1,0 +1,10 @@
+﻿import { chromium } from 'playwright';
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
+const p = await ctx.newPage();
+await p.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' });
+await p.evaluate(() => localStorage.setItem('anywhere-data', JSON.stringify({ onboarded: true, profile: { roleId: 'designer' } })));
+await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(1200);
+const r = await p.evaluate(() => [...document.querySelectorAll('.dash-row > *')].map((e) => { const b = e.getBoundingClientRect(); return { cls: e.className, w: Math.round(b.width), h: Math.round(b.height), x: Math.round(b.x), y: Math.round(b.y) }; }));
+console.log(JSON.stringify(r, null, 2));
+await b.close();

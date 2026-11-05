@@ -1,0 +1,459 @@
+﻿{
+  "sizes": {
+    "1180x760@100": {
+      "boot": 1433,
+      "nav": {
+        "dcl": 157,
+        "load": 158,
+        "paint": [
+          {
+            "name": "first-paint",
+            "t": 228
+          },
+          {
+            "name": "first-contentful-paint",
+            "t": 228
+          }
+        ]
+      },
+      "inner": [
+        1180,
+        760
+      ],
+      "scrollW": 1180,
+      "scrollH": 760,
+      "hOverflow": false,
+      "vOverflow": false,
+      "stage": "1.0079575596816976",
+      "appRect": [
+        1085,
+        748
+      ],
+      "fontSizes": [
+        "6px",
+        "6.5px",
+        "7px",
+        "7.5px",
+        "8px",
+        "9px",
+        "10px",
+        "11px",
+        "12px",
+        "13.3333px"
+      ],
+      "tinyRatio": 57,
+      "smallTargets": 58,
+      "clipped": []
+    },
+    "1440x1000@125": {
+      "boot": 1379,
+      "nav": {
+        "dcl": 116,
+        "load": 117,
+        "paint": [
+          {
+            "name": "first-paint",
+            "t": 196
+          },
+          {
+            "name": "first-contentful-paint",
+            "t": 196
+          }
+        ]
+      },
+      "inner": [
+        1440,
+        1000
+      ],
+      "scrollW": 1440,
+      "scrollH": 1000,
+      "hOverflow": false,
+      "vOverflow": false,
+      "stage": "1.3235294117647058",
+      "appRect": [
+        1424,
+        982
+      ],
+      "fontSizes": [
+        "6px",
+        "6.5px",
+        "7px",
+        "7.5px",
+        "8px",
+        "9px",
+        "10px",
+        "11px",
+        "12px",
+        "13.3333px"
+      ],
+      "tinyRatio": 57,
+      "smallTargets": 55,
+      "clipped": []
+    },
+    "1920x1080@150": {
+      "boot": 1395,
+      "nav": {
+        "dcl": 136,
+        "load": 137,
+        "paint": [
+          {
+            "name": "first-paint",
+            "t": 228
+          },
+          {
+            "name": "first-contentful-paint",
+            "t": 228
+          }
+        ]
+      },
+      "inner": [
+        1920,
+        1080
+      ],
+      "scrollW": 1920,
+      "scrollH": 1080,
+      "hOverflow": false,
+      "vOverflow": false,
+      "stage": "1.4323607427055702",
+      "appRect": [
+        1541,
+        1063
+      ],
+      "fontSizes": [
+        "6px",
+        "6.5px",
+        "7px",
+        "7.5px",
+        "8px",
+        "9px",
+        "10px",
+        "11px",
+        "12px",
+        "13.3333px"
+      ],
+      "tinyRatio": 57,
+      "smallTargets": 13,
+      "clipped": []
+    }
+  },
+  "geom": {
+    "workbench": {
+      "sidebar": [
+        8,
+        9,
+        93,
+        982
+      ],
+      "tabs": [
+        119,
+        320,
+        601,
+        44
+      ],
+      "heroName": [
+        124,
+        182,
+        190,
+        65
+      ],
+      "roleBtn": [
+        319,
+        220,
+        86,
+        26
+      ],
+      "card1": [
+        142,
+        402,
+        398,
+        196
+      ],
+      "card2": [
+        566,
+        402,
+        364,
+        196
+      ],
+      "card3": [
+        957,
+        402,
+        434,
+        196
+      ]
+    },
+    "more": {
+      "page": [
+        101,
+        22,
+        1331,
+        969
+      ],
+      "cards": [
+        {
+          "x": 184,
+          "y": 318,
+          "w": 565,
+          "h": 455,
+          "radius": "10px"
+        },
+        {
+          "x": 784,
+          "y": 318,
+          "w": 565,
+          "h": 455,
+          "radius": "10px"
+        }
+      ]
+    },
+    "companion": {
+      "avatar": {
+        "w": 175,
+        "h": 175,
+        "x": 679,
+        "y": 125
+      },
+      "panel": {
+        "w": 1151,
+        "h": 389,
+        "x": 191,
+        "y": 451
+      },
+      "greet": {
+        "w": 398,
+        "h": 19,
+        "x": 567,
+        "y": 356
+      },
+      "mode": {
+        "w": 224,
+        "h": 29,
+        "x": 654,
+        "y": 393
+      },
+      "pills": [
+        {
+          "text": "对话",
+          "w": 50,
+          "sw": 38,
+          "cw": 38,
+          "overflow": false
+        },
+        {
+          "text": "ANYWHERE Lite",
+          "w": 124,
+          "sw": 92,
+          "cw": 92,
+          "overflow": false
+        }
+      ],
+      "bottom": {
+        "w": 1189,
+        "h": 50,
+        "x": 191,
+        "y": 909
+      }
+    }
+  },
+  "emptyFavorites": "我的收藏20 个站点 · 点击直接打开站站酷国内作品集主场BBehance国际作品集社区DDribbble设计灵感与 shotsFFigma协作式设计工具优优设中文设计教程花花瓣灵",
+  "emptyNotif": "通知暂时没有新通知。",
+  "emptyHistory": "AI 历史记录0 条对话 · 仅保存在本机还没有对话记录。清空全部关闭",
+  "noResult": {
+    "toast": "没有找到匹配站点，试试其他关键词",
+    "empty": "没有匹配站点，换个关键词试试",
+    "tiles": 0
+  },
+  "engineCount": {
+    "label": "“zzzzqqqq不存在” 的搜索结果·0 个站点·+ 添加我的站点",
+    "rendered": 0
+  },
+  "engineAll": {
+    "label": "为你挑选的站点·2740 个站点·+ 添加我的站点",
+    "rendered": 60
+  },
+  "persistFavCount": 20,
+  "clearHistoryConfirm": {
+    "dialogSeen": false,
+    "aiHistoryAfter": 0
+  },
+  "modalDialogA11y": null,
+  "focusTrap": {
+    "trace": [
+      {
+        "tag": "BUTTON",
+        "cls": "hero-btn",
+        "text": "我的收藏",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "hero-btn",
+        "text": "我的导入",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab active",
+        "text": "通用",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab ",
+        "text": "AIGC",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab ",
+        "text": "效率",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab ",
+        "text": "专业",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab ",
+        "text": "轻娱乐",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "tab add",
+        "text": "自定义+",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "",
+        "text": "",
+        "inModal": false
+      },
+      {
+        "tag": "BUTTON",
+        "cls": "",
+        "text": "",
+        "inModal": false
+      }
+    ],
+    "escaped": true
+  },
+  "escClosesModal": true,
+  "enterSubmitAddSite": true,
+  "rapidFav": {
+    "before": 0,
+    "after": 18
+  },
+  "clock12": "10:26",
+  "clock24": "10:26",
+  "openMode": {
+    "stored": "external",
+    "runtime": "external"
+  },
+  "settingsScroll": {
+    "scrollH": 1060,
+    "clientH": 732,
+    "canScroll": true
+  },
+  "contrast": [
+    {
+      "sel": ".site-desc",
+      "missing": true
+    },
+    {
+      "sel": ".side-link",
+      "color": "rgb(169, 155, 184)",
+      "size": "7px",
+      "ratio": 7.64
+    },
+    {
+      "sel": ".set-note",
+      "color": "rgb(108, 97, 122)",
+      "size": "6.5px",
+      "ratio": 3.43
+    },
+    {
+      "sel": ".hero-date",
+      "missing": true
+    },
+    {
+      "sel": ".nlabel",
+      "color": "rgb(148, 134, 159)",
+      "size": "7px",
+      "ratio": 5.84
+    },
+    {
+      "sel": ".site-domain",
+      "missing": true
+    },
+    {
+      "sel": ".set-label small",
+      "color": "rgb(111, 100, 125)",
+      "size": "6.5px",
+      "ratio": 3.59
+    }
+  ],
+  "offline": {
+    "clock": "10:26",
+    "weather": "24°C·晴",
+    "hasArt": false,
+    "bodyHeight": 1000
+  },
+  "coldBoot": [
+    {
+      "ms": 1385,
+      "dcl": 126,
+      "load": 126,
+      "paint": [
+        {
+          "name": "first-paint",
+          "t": 212
+        },
+        {
+          "name": "first-contentful-paint",
+          "t": 212
+        }
+      ]
+    },
+    {
+      "ms": 1383,
+      "dcl": 119,
+      "load": 119,
+      "paint": [
+        {
+          "name": "first-paint",
+          "t": 204
+        },
+        {
+          "name": "first-contentful-paint",
+          "t": 204
+        }
+      ]
+    },
+    {
+      "ms": 1418,
+      "dcl": 143,
+      "load": 144,
+      "paint": [
+        {
+          "name": "first-paint",
+          "t": 228
+        },
+        {
+          "name": "first-contentful-paint",
+          "t": 228
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "finalStored": {
+    "onboarded": true,
+    "role": "designer",
+    "theme": "violet",
+    "openMode": "browser"
+  }
+}

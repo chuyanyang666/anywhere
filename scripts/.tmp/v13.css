@@ -1,0 +1,189 @@
+
+/* ============================================================
+   v13 —— UI 审计整改（导航、重叠、对比度、字号、空态、Toast、弹窗）
+   ============================================================ */
+
+/* A. 左侧导航：移除“分割线 + 工作区”后统一垂直节奏 */
+.nav { gap: 14px; }
+.nav-item { margin-top: 0; }
+
+/* B. 卡片重叠根因：.site-grid 遗留 grid-auto-rows:34px（styles.css 原 1341 行）
+   而站点卡实际高度 ~68–87px，行轨道小于卡片高度 → 上下行互相压叠 */
+.site-grid {
+  grid-auto-rows: auto;
+  align-content: start;
+  gap: 10px 12px;
+}
+.site-tile { min-height: 66px; }
+.engine-grid { grid-auto-rows: auto; }
+
+/* C. 字号下限：次级 8px、正文 9–10px */
+.site-desc { font-size: 8px; }
+.site-domain { font-size: 8px; }
+.cal-meta { font-size: 8px; }
+.mini-week { font-size: 8px; }
+.nav-item .nlabel { font-size: 8px; }
+.side-link { font-size: 8px; }
+.role-line { font-size: 8px; }
+.set-note { font-size: 8px; }
+.card-sub { font-size: 8px; }
+.set-card-desc { font-size: 8px; }
+.stat-label { font-size: 8px; }
+.export-row p { font-size: 8px; }
+.backup-note { font-size: 8px; }
+.mini-stat span { font-size: 8px; }
+.msg-time { font-size: 8px; }
+.chat-empty { font-size: 10.5px; color: #8d7fa0; }
+.chat-empty-tip { font-size: 9px; color: #7c6f8c; }
+.empty-hint { font-size: 10px; color: #8d7fa0; }
+
+/* D. 主题 token 化：蓝/玫主题不得残留紫色 */
+.mini-cell.today {
+  background: linear-gradient(140deg, var(--vio), var(--vio-2));
+  box-shadow: 0 0 10px rgba(var(--acc-rgb), .5);
+}
+.mini-cell.sel {
+  background: linear-gradient(150deg, var(--vio), var(--vio-2));
+  box-shadow: 0 0 9px rgba(var(--acc-rgb), .5);
+}
+.mini-cell.today.sel { box-shadow: 0 0 12px rgba(var(--acc-rgb), .7); }
+.stat-icon {
+  background: linear-gradient(150deg, rgba(var(--acc-rgb), .55), rgba(var(--acc-rgb), .2));
+  border-color: rgba(var(--acc-rgb), .3);
+  color: var(--vio);
+}
+
+/* E. 更多页：标题 + 顶部对齐；备份统计 4 列等宽，消除孤行 */
+.more-page { padding-top: 26px; align-items: flex-start; }
+.more-cards { align-items: stretch; }
+.more-head { grid-column: 1 / -1; margin-bottom: -6px; }
+.more-title { font-size: 18px; font-weight: 800; letter-spacing: .01em; color: #f4ecfb; }
+.more-sub { margin-top: 2px; font-size: 9px; color: #9c8eaa; }
+.backup-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.mini-stat { height: 66px; }
+.inspect-btn {
+  background: linear-gradient(95deg, var(--vio), var(--vio-2));
+  box-shadow: 0 5px 18px rgba(var(--acc-rgb), .28), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.backup-btns button.blue {
+  background: linear-gradient(95deg, var(--vio), var(--vio-2));
+  box-shadow: 0 4px 14px rgba(var(--acc-rgb), .28);
+}
+.progress-fill { background: linear-gradient(90deg, var(--vio), var(--mag)); }
+
+/* F. 工作台滚动余量与空/满态 */
+.wb-scroll { padding-bottom: 7px; }
+
+/* G. Toast 移至右上角，不再压住底部内容 */
+.toast {
+  left: auto;
+  right: 96px;
+  top: 54px;
+  bottom: auto;
+  transform: none;
+  max-width: 460px;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* H. 全部站点弹窗：3 列紧凑 + 可见滚动条与提示 */
+.all-sites-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+  max-height: 378px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+.all-sites-grid .site-tile { min-height: 42px !important; height: 42px; }
+.all-sites-grid::-webkit-scrollbar { width: 6px; }
+.all-sites-grid::-webkit-scrollbar-track { background: rgba(255, 255, 255, .06); border-radius: 999px; }
+.all-sites-grid::-webkit-scrollbar-thumb {
+  background: rgba(var(--acc-rgb), .65);
+  border-radius: 999px;
+}
+.scroll-tip { margin-top: 6px; font-size: 8px; color: #9c8eaa; text-align: center; }
+
+/* I. 搜索历史：与热门分离，支持单项删除 / 清空 */
+.recent-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 3px 0 7px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+}
+.recent-chip button { padding: 0 3px; font-size: 8px; color: #cbbfd8; }
+.recent-del { color: #a99bb8; font-size: 9px; line-height: 1; }
+.recent-del:hover { color: #ff8fa3; }
+.recent-clear { font-size: 8px; color: #b3a5c2; text-decoration: underline; padding: 0 2px; }
+
+/* J. AI 伴侣：清空当前对话 */
+.bottom-actions .clear-chat {
+  color: #ffb3c1;
+  border-color: rgba(255, 120, 150, .34);
+}
+.bottom-actions .clear-chat:disabled { opacity: .42; cursor: default; }
+
+/* K. 设置页滑块实时数值 */
+.slider-val { font-size: 9px; font-weight: 600; color: #cbbfd8; min-width: 34px; text-align: right; }
+
+/* L. 浅色：次级文字统一 ≥4.5:1，控件按可点击处理 */
+.stage[data-scheme='light'] .site-desc,
+.stage[data-scheme='light'] .site-domain,
+.stage[data-scheme='light'] .cal-meta,
+.stage[data-scheme='light'] .set-note,
+.stage[data-scheme='light'] .card-sub,
+.stage[data-scheme='light'] .set-card-desc,
+.stage[data-scheme='light'] .export-row p,
+.stage[data-scheme='light'] .backup-note,
+.stage[data-scheme='light'] .mini-stat span,
+.stage[data-scheme='light'] .mini-label,
+.stage[data-scheme='light'] .role-id .re,
+.stage[data-scheme='light'] .decision-sub,
+.stage[data-scheme='light'] .engine-sub,
+.stage[data-scheme='light'] .more-sub,
+.stage[data-scheme='light'] .scroll-tip,
+.stage[data-scheme='light'] .chat-empty-tip {
+  color: #5c4e6e;
+}
+.stage[data-scheme='light'] .hot-row .hot-label { color: #5c4e6e; }
+.stage[data-scheme='light'] .hot-row button {
+  background: rgba(255, 255, 255, .92);
+  border-color: rgba(86, 56, 118, .2);
+  color: #4d3f5d;
+}
+.stage[data-scheme='light'] .chat-empty,
+.stage[data-scheme='light'] .empty-hint { color: #5c4e6e; }
+.stage[data-scheme='light'] .quick-add {
+  background: rgba(255, 255, 255, .92);
+  border-color: rgba(86, 56, 118, .24);
+  color: #5c4e6e;
+  font-size: 8px;
+}
+.stage[data-scheme='light'] .search-field input::placeholder,
+.stage[data-scheme='light'] .composer input::placeholder { color: #6b5d7b; }
+.stage[data-scheme='light'] .reco-tile.simple .t-dom { color: #5c4e6e; }
+.stage[data-scheme='light'] .stat-label { color: #5c4e6e; }
+.stage[data-scheme='light'] .more-title { color: #221831; }
+.stage[data-scheme='light'] .more-sub { color: #5c4e6e; }
+.stage[data-scheme='light'] .inspect-btn {
+  background: linear-gradient(95deg, var(--vio), var(--vio-2));
+  box-shadow: 0 5px 18px rgba(var(--acc-rgb), .28), inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.stage[data-scheme='light'] .backup-btns button.blue {
+  background: linear-gradient(95deg, var(--vio), var(--vio-2));
+  box-shadow: 0 4px 14px rgba(var(--acc-rgb), .28);
+}
+.stage[data-scheme='light'] .recent-chip { border-color: rgba(86, 56, 118, .2); }
+.stage[data-scheme='light'] .recent-chip button { color: #4d3f5d; }
+.stage[data-scheme='light'] .recent-del { color: #6b5d7b; }
+.stage[data-scheme='light'] .recent-del:hover { color: #b3274b; }
+.stage[data-scheme='light'] .recent-clear { color: #4d3f5d; }
+.stage[data-scheme='light'] .bottom-actions .clear-chat { color: #b3274b; border-color: rgba(179, 39, 75, .3); }
+.stage[data-scheme='light'] .slider-val { color: #4d3f5d; }
+.stage[data-scheme='light'] .all-sites-grid::-webkit-scrollbar-track { background: rgba(86, 56, 118, .1); }
+.stage[data-scheme='light'] .nav-item .nlabel,
+.stage[data-scheme='light'] .side-link { color: #4d3f5d; }

@@ -1,0 +1,63 @@
+﻿{
+  "companion1088": {
+    "pills": [
+      {
+        "text": "对话",
+        "w": 38,
+        "sw": 38,
+        "cw": 38,
+        "overflow": false,
+        "style": "clip"
+      },
+      {
+        "text": "ANYWHERE Lite",
+        "w": 94,
+        "sw": 92,
+        "cw": 92,
+        "overflow": false,
+        "style": "clip"
+      }
+    ],
+    "avatar": {
+      "w": 132,
+      "y": 94
+    }
+  },
+  "favoriteEntry": {
+    "tileCount": 18,
+    "tilesWithStar": 0
+  },
+  "favEmpty": "我的收藏0 个站点 · 点击直接打开还没有收藏，点站点卡片右上角的星标试试。",
+  "persist": {
+    "themeAfterReload": "#3f8cff",
+    "motionOff": "stage motion-off",
+    "pageAfterReload": "workbench",
+    "expectedTheme": "#3f8cff"
+  },
+  "todoPersist": {
+    "before": 1,
+    "after": 1
+  },
+  "openAll": {
+    "openedAfterDoubleClick": 20,
+    "urls": [
+      "https://www.zcool.com.cn",
+      "https://www.behance.net",
+      "https://dribbble.com"
+    ]
+  },
+  "tabOrder": [
+    "nav-item ",
+    "nav-item ",
+    "nav-item ",
+    "side-link",
+    "side-link",
+    "side-link",
+    "side-link",
+    "icon-btn"
+  ],
+  "emptySearch": "先输入你想做的事，例如「去水印」",
+  "copyToast": "先输入你想做的事，例如「去水印」",
+  "updateToast": "先输入你想做的事，例如「去水印」",
+  "errors": []
+}

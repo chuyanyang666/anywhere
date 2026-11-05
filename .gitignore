@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+
+# Signing certificates
+*.pfx
+*.pem
+CSC_LINK_*
+
+# Local temp / working files
+.screenshots/
+.trae-html-share-packages/
+.wrangler/
+_backup/
+ui-audit/
+ui-shots/
+*.pdf
+index.html
+sites-by-category.csv
+sites-categorized.html
+wrangler.toml
+tools/
+scripts/.tmp/
+*.png

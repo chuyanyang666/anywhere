@@ -1,0 +1,18 @@
+{
+  "theme-蓝": "ocean",
+  "theme-玫": "rose",
+  "theme-紫": "violet",
+  "reloadTheme": "ocean",
+  "scheme": "light",
+  "reloadScheme": "light",
+  "avatarUpload": {
+    "hasCustom": true,
+    "len": 28691,
+    "srcHead": "data:image/jpeg;base64"
+  },
+  "avatarReplace": {
+    "len": 41011
+  },
+  "avatarPersist": true,
+  "avatarCleared": true
+}

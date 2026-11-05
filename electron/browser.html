@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ANYWHERE Browser</title>
+    <link rel="stylesheet" href="./browser.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-window" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></symbol>
+        <symbol id="i-incognito" viewBox="0 0 24 24"><path d="M4 11h16M7 11l1-5h8l1 5"/><circle cx="7" cy="17" r="2.4"/><circle cx="17" cy="17" r="2.4"/><path d="M10 15h4"/></symbol>
+        <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4"/><path d="M11 11l9 9M17 17l2 2M15 15l2 2"/></symbol>
+        <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 8v5l3 2"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L7 9.6l6.2-.9L12 3z"/></symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+        <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M10 3h4v3a2 2 0 0 0 4 0h3v4h-3a2 2 0 0 1 0 4v4h-4v3a2 2 0 0 0-4 0h-3v-4h3a2 2 0 0 1 0-4v-4h3"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-plus2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5"/></symbol>
+        <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4V9h16v8h-3"/><rect x="7" y="14" width="10" height="7"/></symbol>
+        <symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 6h10M9 3v3M6 10c1-4 5-6 8-5"/><path d="M11 21l4-10 4 10M12.5 17h5"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16 16l5 5"/></symbol>
+        <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 13v6h16v-6"/><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/></symbol>
+        <symbol id="i-tools" viewBox="0 0 24 24"><path d="M14 6a4 4 0 0 1-5 5l-5 5 2 2 5-5a4 4 0 0 0 5-5z"/><path d="M17 3l4 4-3 3-4-4z"/></symbol>
+        <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.4c-.7.3-1 .9-1 1.6v.5"/><circle cx="12" cy="17" r=".7" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+        <symbol id="i-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
+        <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+        <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+        <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+        <symbol id="i-reload" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.4 6"/><path d="M20 5v6h-6"/></symbol>
+        <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+        <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6l-12 12"/></symbol>
+        <symbol id="i-min" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-max" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1"/></symbol>
+        <symbol id="i-restore" viewBox="0 0 24 24"><rect x="4" y="8" width="12" height="12" rx="1"/><path d="M8 8V4h12v12h-4"/></symbol>
+        <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+        <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+        <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v11H3z"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h6v18H6a2 2 0 0 0-2 2V5z"/><path d="M20 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 1 2 2V5z"/></symbol>
+      <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="15" cy="6" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="18" r="1" fill="currentColor"/><circle cx="15" cy="18" r="1" fill="currentColor"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.5" height="14"/><rect x="13.5" y="5" width="3.5" height="14"/></symbol>
+      <symbol id="i-tabs" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18"/><path d="M7 5V3M13 5V3"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/></symbol>
+      </defs>
+    </svg>
+
+    <div class="bwin">
+      <div class="tabstrip">
+        <div class="tabs" id="tabs"></div>
+        <button class="newtab-btn" id="newTabBtn" title="新标签页 (Ctrl+T)"><svg><use href="#i-plus"/></svg></button>
+        <div class="drag-space"></div>
+        <div class="win-btns">
+          <button class="winbtn" id="winMin" title="最小化"><svg><use href="#i-min"/></svg></button>
+          <button class="winbtn" id="winMax" title="最大化"><svg><use href="#i-max"/></svg></button>
+          <button class="winbtn close" id="winClose" title="关闭"><svg><use href="#i-x"/></svg></button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="navbtns">
+          <button class="tb" id="backBtn" title="后退"><svg><use href="#i-left"/></svg></button>
+          <button class="tb" id="fwdBtn" title="前进"><svg><use href="#i-right"/></svg></button>
+          <button class="tb" id="reloadBtn" title="刷新"><svg><use href="#i-reload"/></svg></button>
+          <button class="tb" id="homeBtn" title="主页"><svg><use href="#i-home"/></svg></button>
+        </div>
+
+        <div class="omnibox" id="omnibox">
+          <span class="secure" id="secureIcon"><svg><use href="#i-lock"/></svg></span>
+          <span class="omni-badge" id="omniBadge">ANYWHERE</span>
+          <input id="urlInput" spellcheck="false" autocomplete="off" placeholder="搜索 Google 或输入网址" />
+          <button class="trbtn" id="trBtn" title="翻译此网页" hidden><svg><use href="#i-translate"/></svg></button>
+          <button class="starbtn" id="starBtn" title="收藏此页"><svg><use href="#i-star"/></svg></button>
+        </div>
+
+        <div class="rightbtns">
+          <button class="tb" id="downloadBtn" title="下载内容"><svg><use href="#i-download"/></svg></button>
+          <button class="tb" id="menuBtn" title="自定义及控制 ANYWHERE"><svg><use href="#i-more"/></svg></button>
+          <button class="avatar" id="avatarBtn" title="chu · 已登录">C</button>
+        </div>
+      </div>
+
+      <div class="bookmarksbar" id="bookmarksBar" hidden></div>
+
+      <div class="content">
+        <div class="views" id="views"></div>
+
+        <div class="newtab" id="newtab">
+          <div class="nt-logo"><span class="nt-mark">✦</span><span>anywhere</span></div>
+          <div class="nt-title">一个入口，通向全网</div>
+          <div class="nt-search">
+            <svg><use href="#i-search"/></svg>
+            <input id="ntInput" placeholder="搜索网页，或输入网址" autocomplete="off" />
+          </div>
+          <div class="nt-links" id="ntLinks">
+            <button data-url="https://www.google.com"><span class="nt-fav" style="background:linear-gradient(145deg,#4285f4,#34a853)">G</span>Google</button>
+            <button data-url="https://www.bilibili.com"><span class="nt-fav" style="background:#00a1d6">B</span>哔哩哔哩</button>
+            <button data-url="https://www.zcool.com.cn"><span class="nt-fav" style="background:#e8443a">站</span>站酷</button>
+            <button data-url="https://github.com"><span class="nt-fav" style="background:#333">GH</span>GitHub</button>
+            <button data-url="https://www.figma.com"><span class="nt-fav" style="background:linear-gradient(145deg,#a259ff,#f24e1e)">F</span>Figma</button>
+            <button data-url="https://www.xiaohongshu.com"><span class="nt-fav" style="background:#ff2442">小</span>小红书</button>
+            <button data-url="https://www.zhihu.com"><span class="nt-fav" style="background:#1772f6">知</span>知乎</button>
+            <button data-url="https://www.douban.com"><span class="nt-fav" style="background:#2e963a">豆</span>豆瓣</button>
+          </div>
+          <div class="nt-hint">输入网址开始浏览 · Ctrl+T 新建标签 · Ctrl+F 页内查找</div>
+        </div>
+
+        <div class="errorpage" id="errorPage" hidden>
+          <div class="err-card">
+            <div class="err-icon">!</div>
+            <div class="err-title" id="errTitle">无法打开此页面</div>
+            <div class="err-desc" id="errDesc"></div>
+            <div class="err-url" id="errUrl"></div>
+            <button class="err-retry" id="errRetry">重试</button>
+          </div>
+        </div>
+
+        <div class="omnisug" id="omniSug" hidden></div>
+
+        <div class="findbar" id="findbar">
+          <input id="findInput" placeholder="在页面中查找" />
+          <span class="findcount" id="findCount">0/0</span>
+          <button id="findPrev" title="上一个"><svg><use href="#i-up"/></svg></button>
+          <button id="findNext" title="下一个"><svg><use href="#i-down"/></svg></button>
+          <button id="findClose" title="关闭"><svg><use href="#i-x"/></svg></button>
+        </div>
+
+        <div class="trpop" id="trPop" hidden>
+          <div class="tr-head">
+            <svg class="tr-ico"><use href="#i-translate"/></svg>
+            <span class="tr-title">翻译此网页</span>
+            <button class="tr-x" id="trClose" title="关闭"><svg><use href="#i-x"/></svg></button>
+          </div>
+          <div class="tr-langs">
+            <select id="trSrc" title="原文语言"></select>
+            <span class="tr-arrow">→</span>
+            <select id="trDst" title="目标语言"></select>
+          </div>
+          <label class="tr-always" id="trAlwaysRow">
+            <input type="checkbox" id="trAlways" />
+            <span>一律翻译「<b id="trAlwaysLang">英语</b>」网页</span>
+          </label>
+          <div class="tr-actions">
+            <button class="tr-go" id="trGo">翻译</button>
+            <button class="tr-revert" id="trRevert" hidden>显示原文</button>
+          </div>
+          <button class="tr-never" id="trNever">一律不翻译此网站</button>
+        </div>
+
+        <div class="sidepanel" id="sidepanel">
+          <div class="sp-head"><span id="spTitle">下载内容</span><button id="spClose"><svg><use href="#i-x"/></svg></button></div>
+          <div class="sp-list" id="spList"></div>
+          <div class="sp-actions" id="spActions" hidden></div>
+        </div>
+
+        <div class="tabswitcher" id="tabSwitcher" hidden>
+          <div class="ts-box">
+            <div class="ts-head">
+              <svg><use href="#i-tabs"/></svg>
+              <input id="tsInput" placeholder="搜索标签页…" autocomplete="off" />
+              <span class="ts-count" id="tsCount"></span>
+            </div>
+            <div class="ts-list" id="tsList"></div>
+            <div class="ts-foot"><span>↑↓ 选择</span><span>Enter 打开</span><span>Esc 关闭</span></div>
+          </div>
+        </div>
+
+        <div class="reader" id="reader" hidden>
+          <div class="rd-bar">
+            <button class="rd-btn" id="rdBack" title="返回网页"><svg><use href="#i-left"/></svg></button>
+            <div class="rd-meta"><span class="rd-kicker">阅读模式</span><span id="rdTitle" class="rd-title"></span></div>
+            <button class="rd-btn" id="rdSmaller" title="减小字号">A−</button>
+            <button class="rd-btn" id="rdBigger" title="增大字号">A+</button>
+            <button class="rd-btn" id="rdClose" title="关闭阅读模式"><svg><use href="#i-x"/></svg></button>
+          </div>
+          <div class="rd-scroll" id="rdScroll"><div class="rd-body" id="rdBody"></div></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+        <div class="confirm" id="confirm">
+          <div class="confirm-box">
+            <div class="cf-title">删除浏览数据？</div>
+            <div class="cf-body">会清除缓存、Cookie 与本地下载记录，收藏与设置不受影响。</div>
+            <div class="cf-actions">
+              <button id="cfCancel">取消</button>
+              <button class="danger" id="cfOk">删除</button>
+            </div>
+          </div>
+        </div>
+        <div class="ctxmenu" id="ctxmenu"></div>
+
+        <div class="confirm" id="promptDlg">
+          <div class="confirm-box">
+            <div class="cf-title" id="promptTitle">新建标签页分组</div>
+            <div class="cf-body" id="promptBody">给分组起一个名字，稍后可在「标签页分组」中管理。</div>
+            <input class="cf-input" id="promptInput" placeholder="分组名称" maxlength="20" />
+            <div class="cf-actions">
+              <button id="promptCancel">取消</button>
+              <button class="primary" id="promptOk">确定</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="menu" id="menu">
+          <div class="menu-group">
+            <button class="mi" data-act="newtab"><svg><use href="#i-plus"/></svg><span>打开新的标签页</span><em>Ctrl+T</em></button>
+            <button class="mi" data-act="newwin"><svg><use href="#i-window"/></svg><span>打开新的窗口</span><em>Ctrl+N</em></button>
+            <button class="mi" data-act="incognito"><svg><use href="#i-incognito"/></svg><span>打开新的无痕式窗口</span><em>Ctrl+Shift+N</em></button>
+          </div>
+          <div class="menu-sep"></div>
+          <div class="menu-group">
+            <button class="mi profile" data-act="profile">
+              <span class="mavatar">C</span>
+              <span>chu</span>
+              <i class="logged">已登录</i>
+              <svg class="chev"><use href="#i-chev"/></svg>
+            </button>
+            <button class="mi" data-act="password"><svg><use href="#i-key"/></svg><span>密码和自动填充</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="history"><svg><use href="#i-history"/></svg><span>历史记录</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="downloads"><svg><use href="#i-download"/></svg><span>下载内容</span><em>Ctrl+J</em><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="bookmarks"><svg><use href="#i-star"/></svg><span>书签和清单</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="groups"><svg><use href="#i-grid"/></svg><span>标签页分组</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="reader"><svg><use href="#i-book"/></svg><span>阅读模式</span><em>提取正文</em></button>
+            <button class="mi" data-act="tabs"><svg><use href="#i-tabs"/></svg><span>切换标签页</span><em>Ctrl+Shift+A</em></button>
+            <button class="mi" data-act="extensions"><svg><use href="#i-puzzle"/></svg><span>扩展程序</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="clear"><svg><use href="#i-trash"/></svg><span>删除浏览数据…</span><em>Ctrl+Shift+Del</em></button>
+          </div>
+          <div class="menu-sep"></div>
+          <div class="menu-group zoom-group">
+            <svg><use href="#i-search"/></svg>
+            <span>缩放</span>
+            <button class="zoombtn" id="zoomOut"><svg><use href="#i-minus"/></svg></button>
+            <b id="zoomVal">100%</b>
+            <button class="zoombtn" id="zoomIn"><svg><use href="#i-plus2"/></svg></button>
+            <button class="zoombtn full" id="fullBtn" title="全屏"><svg><use href="#i-full"/></svg></button>
+          </div>
+          <div class="menu-sep"></div>
+          <div class="menu-group">
+            <button class="mi" data-act="print"><svg><use href="#i-print"/></svg><span>打印…</span><em>Ctrl+P</em></button>
+            <button class="mi" data-act="translate"><svg><use href="#i-translate"/></svg><span>翻译…</span><em></em></button>
+            <button class="mi" data-act="find"><svg><use href="#i-search"/></svg><span>查找和修改</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="cast"><svg><use href="#i-share"/></svg><span>保存和分享…</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="tools"><svg><use href="#i-tools"/></svg><span>更多工具</span><svg class="chev"><use href="#i-chev"/></svg></button>
+          </div>
+          <div class="menu-sep"></div>
+          <div class="menu-group">
+            <button class="mi" data-act="help"><svg><use href="#i-help"/></svg><span>帮助</span><svg class="chev"><use href="#i-chev"/></svg></button>
+            <button class="mi" data-act="settings"><svg><use href="#i-settings"/></svg><span>设置</span></button>
+            <button class="mi" data-act="exit"><svg><use href="#i-exit"/></svg><span>退出</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./browser.js"></script>
+  </body>
+</html>

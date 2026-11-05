@@ -1,0 +1,117 @@
+# ANYWHERE Release Workflow
+#
+# 触发方式：推送 git tag （形如 v1.0.0）
+# 流程：构建 Windows NSIS 安装包 → 上传 → 提交给 SignPath Foundation 免费签名 → 下载签名包 → 发布 Release
+#
+# SignPath Foundation 申请地址：https://signpath.org/apply
+# 申请通过后，在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加：
+#   SIGNPATH_API_TOKEN        — SignPath 控制台的 CI API Token
+#   SIGNPATH_ORGANIZATION_ID  — SignPath 组织 UUID（申请后 SignPath 邮件里会给）
+#   SIGNPATH_PROJECT_SLUG     — SignPath 项目 slug（申请时你起的名字）
+#   SIGNPATH_SIGNING_POLICY   — 先用 test-signing 测试，上线时改成 release-signing
+#
+# 同时，GitHub 仓库需要有写 Release 的权限（默认 GITHUB_TOKEN 即可）。
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      artifact-name: ${{ steps.build.outputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 构建 Windows 安装包（未签名）
+        id: build
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          npm run dist
+          $nsis = Get-ChildItem -Path release -Filter "*.exe" | Select-Object -First 1
+          if (-not $nsis) { Write-Error "未找到 NSIS 安装包"; exit 1 }
+          Write-Output "artifact-name=$($nsis.Name)"
+          Copy-Item $nsis.FullPath release\anywhere-setup.exe
+
+      - name: 上传未签名安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: anywhere-setup-unsigned
+          path: release/anywhere-setup.exe
+          if-no-files-found: error
+
+  sign:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载未签名安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: anywhere-setup-unsigned
+          path: unsigned
+
+      - name: 提交给 SignPath 签名
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          signing-policy: ${{ secrets.SIGNPATH_SIGNING_POLICY }}
+          # artifact-config 告诉 SignPath 签名哪些文件、怎么找它们
+          artifact-config: |
+            [{
+              "path": "unsigned/anywhere-setup.exe",
+              "signNextBuild": true,
+              "description": "ANYWHERE Windows NSIS installer"
+            }]
+          # 等待签名完成（最多等 20 分钟，SignPath 通常 1-5 分钟）
+          wait-for-completion: true
+          max-wait: 1200
+          output-directory: signed
+
+      - name: 上传已签名安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: anywhere-setup-signed
+          path: signed/*.exe
+          if-no-files-found: error
+
+  release:
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载签名后的安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: anywhere-setup-signed
+          path: release
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ANYWHERE ${{ github.ref_name }}
+          body: |
+            ## ANYWHERE ${{ github.ref_name }}
+
+            查看完整更新日志：https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
+
+            关于本软件：MIT 许可证 · 内嵌浏览器 · 素材库 · RSS · 跨站搜索矩阵
+          files: release/*.exe
+          fail_on_unmatched_files: true

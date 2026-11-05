@@ -1,0 +1,72 @@
+{
+  "name": "anywhere-desktop",
+  "version": "1.0.0",
+  "license": "MIT",
+  "copyright": "Copyright © 2025 ANYWHERE",
+  "private": true,
+  "description": "ANYWHERE - 一个入口，通向全网",
+  "main": "electron/main.js",
+  "author": "ANYWHERE",
+  "scripts": {
+    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "electron .",
+    "dist": "vite build && electron-builder --win nsis",
+    "pack": "vite build && electron-builder --win --dir",
+    "test:e2e": "node scripts/tests/regression.mjs"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "framer-motion": "^11.11.17",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "playwright": "^1.64.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "vite": "^6.0.3",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.anywhere.desktop",
+    "productName": "ANYWHERE",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/assets/icons/ai-avatar.png",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "rfc3161TimeStampServer": "http://timestamp.digicert.com",
+      "signAndEditExecutable": true,
+      "forceCodeSigning": false
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://updates.anywhere.app/win"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "license": "TERMS.md"
+    }
+  }
+}
