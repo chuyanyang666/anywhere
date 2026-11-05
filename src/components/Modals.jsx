@@ -7,7 +7,7 @@ import { findSite, SITES, CATEGORIES } from '../data/sites';
 import { buildCustomRole, resolveRole, roleById, roleSites, roleTabSites, ROLES, WORK_TABS } from '../data/roles';
 import { buildMonthGrid, clamp, copyText, dayMeta, domainOfSite, glyphOf, openSite, paletteOf, relativeTime, wait } from '../lib/utils';
 import { recommend } from '../lib/ai';
-import { logout, updateProfile, authErrorText } from '../lib/auth';
+import { logout, updateProfile, authErrorText, getAccounts, switchAccount, activeAccountId, forgetAccount, setAuthToken } from '../lib/auth';
 import {
   PRICING, PRO_FEATURES, activateCode, billingErrorText, isPro, proUntil,
 } from '../lib/billing';
@@ -846,7 +846,7 @@ export function FeedbackModal({ onClose }) {
     const body = text.trim();
     if (!body) return;
     const version = window.__anywhereVersion || '1.0.0';
-    const mailto = `mailto:support@anywhere.app?subject=${encodeURIComponent('ANYWHERE 用户反馈')}&body=${encodeURIComponent(`${body}\n\n---\n版本 v${version}`)}`;
+    const mailto = `mailto:chuyanyang666@gmail.com?subject=${encodeURIComponent('ANYWHERE 用户反馈')}&body=${encodeURIComponent(`${body}\n\n---\n版本 v${version}`)}`;
     if (window.api?.openExternal) {
       let ok = false;
       try {
@@ -854,14 +854,14 @@ export function FeedbackModal({ onClose }) {
       } catch {
         ok = false;
       }
-      if (ok) notify('已打开邮件客户端，请确认发送到 support@anywhere.app', 'ok');
+      if (ok) notify('已打开邮件客户端，请确认发送到 chuyanyang666@gmail.com', 'ok');
       else {
-        copyText(`收件人 support@anywhere.app\n\n${body}`);
-        notify('未找到邮件客户端，反馈内容已复制，可发送至 support@anywhere.app', 'info');
+        copyText(`收件人 chuyanyang666@gmail.com\n\n${body}`);
+        notify('未找到邮件客户端，反馈内容已复制，可发送至 chuyanyang666@gmail.com', 'info');
       }
     } else {
-      copyText(`收件人 support@anywhere.app\n\n${body}`);
-      notify('反馈内容已复制，可发送至 support@anywhere.app', 'ok');
+      copyText(`收件人 chuyanyang666@gmail.com\n\n${body}`);
+      notify('反馈内容已复制，可发送至 chuyanyang666@gmail.com', 'ok');
     }
     addNotification({ title: '反馈已提交', body: body.slice(0, 80) });
     setText('');
@@ -1139,6 +1139,31 @@ export function ProfileModal({ onClose }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
+  const [accounts, setAccounts] = useState(getAccounts());
+  const currentId = activeAccountId();
+
+  const doSwitch = async (id) => {
+    if (busy) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const u = await switchAccount(id);
+      setUser(u);
+      setAccounts(getAccounts());
+      setMsg(`已切换到 ${u.nickname || u.email}`);
+    } catch (e) {
+      setMsg(authErrorText(e));
+      setAccounts(getAccounts());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addAccount = () => {
+    setAuthToken('');
+    useAppStore.setState({ user: null });
+    onClose();
+  };
 
   const saveNick = async () => {
     if (busy) return;
@@ -1184,7 +1209,9 @@ export function ProfileModal({ onClose }) {
 
   const doLogout = async () => {
     setBusy(true);
+    const id = activeAccountId();
     await logout();
+    if (id) forgetAccount(id);
     setUser(null);
     onClose();
   };
@@ -1238,6 +1265,28 @@ export function ProfileModal({ onClose }) {
           </div>
         )}
         {msg && <div className="acct-msg">{msg}</div>}
+        {user && accounts.length > 0 && (
+          <div className="acct-list">
+            <div className="acct-list-title">本机账号 · 快速切换</div>
+            {accounts.map((a) => (
+              <div className={`acct-row${a.id === currentId ? ' on' : ''}`} key={a.id}>
+                <div className="acct-row-avatar">
+                  {a.avatar
+                    ? <img src={a.avatar} alt="" />
+                    : <span>{(a.nickname || a.email || '?').slice(0, 1).toUpperCase()}</span>}
+                </div>
+                <div className="acct-row-info">
+                  <b>{a.nickname || '未命名用户'}</b>
+                  <span>{a.email}</span>
+                </div>
+                {a.id === currentId
+                  ? <i className="acct-cur">当前</i>
+                  : <button disabled={busy} onClick={() => doSwitch(a.id)}>切换</button>}
+              </div>
+            ))}
+            <button className="acct-add" onClick={addAccount}>+ 登录其他账号</button>
+          </div>
+        )}
         <div className="mini-row">
           <span className="nd" />
           <div>

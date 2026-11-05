@@ -197,7 +197,11 @@ export const useAppStore = create((set, get) => ({
     persist({ profile });
   },
 
-  setUser: (user) => set({ user }),
+  // 用户信息同时写盘，供内嵌浏览器窗口读取（头像/昵称与工作台保持一致）
+  setUser: (user) => {
+    set({ user });
+    persist({ user: user || null });
+  },
 
   // 云同步：把远端数据合并进本地（不提示、不覆盖本地独有数据）
   applyCloudData: (data) => {

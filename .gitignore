@@ -39,3 +39,6 @@ wrangler.toml
 tools/
 scripts/.tmp/
 *.png
+# 应用图标需要提交（打包与窗口都依赖它）
+!build/icon.png
+!public/assets/icons/app-icon.png

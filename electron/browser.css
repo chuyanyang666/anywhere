@@ -186,7 +186,10 @@ body { padding: 6px; }
   display: grid; place-items: center;
   margin-left: 4px;
   border: 1px solid rgba(255,255,255,.2);
+  overflow: hidden;
+  padding: 0;
 }
+.avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 /* content */
 .content {
@@ -494,7 +497,9 @@ body { padding: 6px; }
   color: #fff; font-size: 11px; font-weight: 600;
   display: grid; place-items: center;
   flex: 0 0 24px;
+  overflow: hidden;
 }
+.mi.profile .mavatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .mi.profile span { flex: 0 0 auto; font-size: 12px; color: #9aa0a6; margin-left: -2px; }
 .mi.profile i {
   font-style: normal;

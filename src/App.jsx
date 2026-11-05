@@ -12,7 +12,7 @@ import Matrix from './pages/Matrix';
 import Feed from './pages/Feed';
 import Onboarding from './pages/Onboarding';
 import Login from './pages/Login';
-import { fetchMe, getAuthToken, clearAuthToken } from './lib/auth';
+import { fetchMe, getAuthToken, clearAuthToken, rememberAccount } from './lib/auth';
 import { startCloudSync, stopCloudSync } from './lib/sync';
 import {
   AddSiteModal, AiSettingsModal, AIMatchModal, AllSitesModal, BookmarkImportModal, BookmarksModal, CalendarModal,
@@ -119,8 +119,10 @@ export default function App() {
 
   // 登录后开启云同步
   useEffect(() => {
-    if (user) startCloudSync();
-    else stopCloudSync();
+    if (user) {
+      rememberAccount(user);
+      startCloudSync();
+    } else stopCloudSync();
     return () => stopCloudSync();
   }, [user]);
 

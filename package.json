@@ -13,6 +13,7 @@
     "build": "vite build",
     "start": "electron .",
     "dist": "vite build && electron-builder --win nsis",
+    "dist:ci": "vite build && electron-builder --win nsis --publish never",
     "pack": "vite build && electron-builder --win --dir",
     "test:e2e": "node scripts/tests/regression.mjs"
   },
@@ -40,6 +41,7 @@
   "build": {
     "appId": "com.anywhere.desktop",
     "productName": "ANYWHERE",
+    "artifactName": "anywhere-setup.${ext}",
     "directories": {
       "output": "release"
     },
@@ -50,7 +52,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/assets/icons/ai-avatar.png",
+      "icon": "build/icon.png",
       "signingHashAlgorithms": [
         "sha256"
       ],
@@ -59,8 +61,9 @@
       "forceCodeSigning": false
     },
     "publish": {
-      "provider": "generic",
-      "url": "https://updates.anywhere.app/win"
+      "provider": "github",
+      "owner": "chuyanyang666",
+      "repo": "anywhere"
     },
     "nsis": {
       "oneClick": false,

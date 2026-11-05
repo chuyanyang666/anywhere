@@ -84,6 +84,7 @@
     readerFont: 18,
     reading: false,
     pausedDl: new Set(),
+    user: null,
   };
 
   let pendingPatch = null;
@@ -151,7 +152,8 @@
 
   function persist(patch) {
     if (!api.storeSet) return;
-    pendingPatch = Object.assign({}, pendingPatch, patch);
+    // 浏览器侧数据变更时间戳：云同步用它判断「云端 vs 本地谁更新」
+    pendingPatch = Object.assign({}, pendingPatch, patch, { browserUpdatedAt: Date.now() });
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       const p = pendingPatch;
@@ -165,6 +167,33 @@
     try {
       navigator.clipboard.writeText(text).then(() => toast('已复制到剪贴板')).catch(() => {});
     } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- 账号（与工作台账号一体化） ---------- */
+
+  function accountName(u) {
+    return (u && (u.nickname || u.email)) || '';
+  }
+
+  function renderAccount() {
+    const u = state.user;
+    const name = accountName(u);
+    const letter = (name || '?').slice(0, 1).toUpperCase();
+    const btn = $('avatarBtn');
+    if (btn) {
+      btn.title = u ? `${name} · 已登录` : '未登录';
+      if (u && u.avatar) btn.innerHTML = `<img src="${esc(u.avatar)}" alt="" />`;
+      else btn.textContent = letter;
+    }
+    const mAvatar = document.querySelector('#menu .mi.profile .mavatar');
+    if (mAvatar) {
+      if (u && u.avatar) mAvatar.innerHTML = `<img src="${esc(u.avatar)}" alt="" />`;
+      else mAvatar.textContent = letter;
+    }
+    const mName = document.querySelector('#menu .mi.profile span:not(.mavatar)');
+    if (mName) mName.textContent = u ? name : '未登录';
+    const mStatus = document.querySelector('#menu .mi.profile .logged');
+    if (mStatus) mStatus.textContent = u ? '已登录' : '未登录';
   }
 
   /* ---------- 地址解析 ---------- */
@@ -1810,7 +1839,10 @@
     newtab: () => createTab(),
     newwin: () => { api.newBrowserWindow ? api.newBrowserWindow((activeTab() && activeTab().url) || '') : createTab(); },
     incognito: () => { api.openBrowser ? api.openBrowser({ url: (activeTab() && activeTab().url) || '', incognito: true }) : toast('无痕窗口需要桌面端支持'); },
-    profile: () => toast('个人资料：chu · 已登录（多账号切换待接入）'),
+    profile: () => {
+      const u = state.user;
+      toast(u ? `个人资料：${accountName(u)} · ${u.email || ''}` : '未登录：请先在主窗口登录，账号会自动同步到浏览器');
+    },
     password: () => openSettings('password'),
     history: () => openPanel('history'),
     downloads: () => openPanel('downloads'),
@@ -2182,7 +2214,7 @@
     // 菜单与面板
     $('menuBtn').addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
     $('downloadBtn').addEventListener('click', () => openPanel('downloads'));
-    $('avatarBtn').addEventListener('click', () => toast('个人资料：chu · 已登录'));
+    $('avatarBtn').addEventListener('click', () => ACTIONS.profile());
     $('spClose').addEventListener('click', closePanel);
 
     menuEl.addEventListener('click', (e) => {
@@ -2637,6 +2669,7 @@
       state.bookmarkFolders = (Array.isArray(d && d.bookmarkFolders) ? d.bookmarkFolders : [])
         .map((f) => String(f).trim()).filter(Boolean);
       state.downloads = Array.isArray(d && d.downloads) ? d.downloads : [];
+      state.user = (d && d.user) || null;
       const engine = d && d.settings && d.settings.engine;
       if (ENGINES[engine]) state.engine = engine;
       const bs = (d && d.settings && d.settings.browser) || {};
@@ -2654,6 +2687,15 @@
 
     try { if (api.guestPreloadPath) state.guestPreload = await api.guestPreloadPath(); } catch (e) { /* ignore */ }
     if (api.onRoleChanged) api.onRoleChanged(() => { loadRoleBookmarks(); });
+    if (api.onUserChanged) api.onUserChanged((u) => { state.user = u || null; renderAccount(); });
+    if (api.onStoreChanged) api.onStoreChanged(() => {
+      // 其它窗口（例如云同步 / 工作台）写入了书签或历史，重新读取并刷新界面
+      loadStore().then(() => {
+        renderBookmarksBar();
+        if (state.panel) renderPanel();
+      }).catch(() => {});
+    });
+    renderAccount();
     loadRoleBookmarks();
 
     const params = new URLSearchParams(location.search);

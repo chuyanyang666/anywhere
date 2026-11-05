@@ -36,6 +36,8 @@ export default function Feed() {
   const [customName, setCustomName] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [fetchedAt, setFetchedAt] = useState(0);
+  const [checking, setChecking] = useState(false);
+  const [health, setHealth] = useState([]);
 
   const cfg = settings.crossFeed || {};
   const enabled = cfg.enabled || {};
@@ -86,6 +88,31 @@ export default function Feed() {
     if (Object.keys(enabled).length === 0) patchCfg({ enabled: BUILTIN.reduce((acc, s) => ({ ...acc, [s.id]: true }), {}) });
   }, []);
 
+  // 源健康检查：把「全部」源（含已关闭的）都抓一遍，定位哪个源失效
+  const checkAll = async () => {
+    const api = window.api;
+    if (!api?.feedFetch) {
+      notify('内容流需要在桌面客户端中运行', 'bad');
+      return;
+    }
+    if (!sources.length) return;
+    setChecking(true);
+    try {
+      const r = await api.feedFetch(sources.map((s) => ({ id: s.id, name: s.name, url: s.url })));
+      if (!r?.ok) {
+        notify(r?.error || '检查失败', 'bad');
+        return;
+      }
+      setHealth(Array.isArray(r.sources) ? r.sources : []);
+      const bad = (r.sources || []).filter((s) => !s.ok).length;
+      notify(bad ? `${bad} 个源不可用` : '全部源正常', bad ? 'bad' : 'ok');
+    } catch (e) {
+      notify(String(e?.message || e), 'bad');
+    } finally {
+      setChecking(false);
+    }
+  };
+
   useEffect(() => { if (Object.keys(enabled).length) load(false); }, [settings.crossFeed]);
 
   const addCustom = () => {
@@ -115,10 +142,26 @@ export default function Feed() {
           <div className="x-title">跨站内容流</div>
           <div className="x-sub">用 RSS 把多个站点的更新汇成一条时间线，不追踪、不上传。</div>
         </div>
-        <button className="x-btn" onClick={() => load(true)} disabled={loading}>
-          <RefreshCw size={13} /> {loading ? '抓取中…' : '刷新'}
-        </button>
+        <div className="x-head-actions">
+          <button className="x-btn x-btn-ghost" onClick={checkAll} disabled={checking || loading}>
+            {checking ? '检查中…' : '检查源'}
+          </button>
+          <button className="x-btn" onClick={() => load(true)} disabled={loading}>
+            <RefreshCw size={13} /> {loading ? '抓取中…' : '刷新'}
+          </button>
+        </div>
       </div>
+
+      {health.length > 0 && (
+        <div className="x-feed-status x-health">
+          {health.map((s) => (
+            <span key={s.id} className={s.ok ? 'ok' : 'bad'}>
+              {s.name} · {s.ok ? `${s.count ?? 0} 条` : (s.error || '不可用')}
+            </span>
+          ))}
+          <span className="time"><Clock3 size={11} /> 刚刚检查</span>
+        </div>
+      )}
 
       <div className="x-feed-sources">
         {sources.map((s) => (

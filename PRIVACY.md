@@ -52,4 +52,4 @@ ANYWHERE 内置了对约 38 个常见广告/追踪域名的拦截（`google-anal
 
 ## 六、联系
 
-如有隐私相关疑问，请发邮件至 `support@anywhere.app`（替换为你的真实邮箱）。
+如有隐私相关疑问，请发邮件至 `chuyanyang666@gmail.com`。

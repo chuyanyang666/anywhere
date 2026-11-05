@@ -98,6 +98,16 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('role:changed', fn);
     return () => ipcRenderer.removeListener('role:changed', fn);
   },
+  onUserChanged: (cb) => {
+    const fn = (_e, v) => cb(v);
+    ipcRenderer.on('user:changed', fn);
+    return () => ipcRenderer.removeListener('user:changed', fn);
+  },
+  onStoreChanged: (cb) => {
+    const fn = (_e, v) => cb(v);
+    ipcRenderer.on('store:changed', fn);
+    return () => ipcRenderer.removeListener('store:changed', fn);
+  },
 
   /* 素材库 */
   assetsList: () => ipcRenderer.invoke('assets:list'),

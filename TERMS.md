@@ -53,4 +53,4 @@ ANYWHERE 的 AI 功能需要你自行配置 API Key。**API Key 由你自己保�
 
 ## 八、联系
 
-如有疑问，请发邮件至 `support@anywhere.app`（替换为你的真实邮箱）。
+如有疑问，请发邮件至 `chuyanyang666@gmail.com`。

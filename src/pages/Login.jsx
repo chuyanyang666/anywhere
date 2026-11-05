@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAuthBase, setAuthBase, loginWithPassword, register, authErrorText } from '../lib/auth';
+import { getAuthBase, setAuthBase, loginWithPassword, register, authErrorText, getAccounts, switchAccount } from '../lib/auth';
 
 export default function Login({ onSuccess, onOffline }) {
   const [mode, setMode] = useState('login');
@@ -11,6 +11,23 @@ export default function Login({ onSuccess, onOffline }) {
   const [netFail, setNetFail] = useState(false);
   const [showServer, setShowServer] = useState(false);
   const [server, setServer] = useState(getAuthBase());
+  const [accounts, setAccounts] = useState(getAccounts());
+
+  // 一键切回本机登录过的账号，不需要重新输密码
+  const quick = async (id) => {
+    if (busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const user = await switchAccount(id);
+      onSuccess(user);
+    } catch (e2) {
+      setErr(authErrorText(e2));
+      setAccounts(getAccounts());
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -36,6 +53,25 @@ export default function Login({ onSuccess, onOffline }) {
       <div className="login-card">
         <div className="login-logo">ANYWHERE</div>
         <div className="login-sub">登录后即可使用，收藏与工作空间会自动云端同步</div>
+
+        {accounts.length > 0 && (
+          <div className="login-saved">
+            <div className="login-saved-title">本机账号</div>
+            {accounts.map((a) => (
+              <button key={a.id} type="button" className="login-saved-row" disabled={busy} onClick={() => quick(a.id)}>
+                <span className="login-saved-avatar">
+                  {a.avatar ? <img src={a.avatar} alt="" /> : (a.nickname || a.email || '?').slice(0, 1).toUpperCase()}
+                </span>
+                <span className="login-saved-info">
+                  <b>{a.nickname || '未命名用户'}</b>
+                  <i>{a.email}</i>
+                </span>
+                <span className="login-saved-go">进入</span>
+              </button>
+            ))}
+            <div className="login-saved-sep">或使用其他账号</div>
+          </div>
+        )}
 
         <div className="login-tabs">
           <button className={mode === 'login' ? 'on' : ''} onClick={() => { setMode('login'); setErr(''); }}>登录</button>

@@ -327,7 +327,7 @@ function createMainWindow() {
     show: false,
     hasShadow: true,
     roundedCorners: true,
-    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'ai-avatar.png'),
+    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -427,7 +427,7 @@ function createBrowserWindow(url, { incognito = false, isNewWindow = false, urls
     backgroundColor: '#00000000',
     show: false,
     hasShadow: true,
-    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'ai-avatar.png'),
+    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'app-icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -752,6 +752,19 @@ function setupIpc() {
     // 拦截开关即时生效（不需要重启浏览器窗口）
     if (patch && patch.settings && typeof patch.settings.blockAds === 'boolean') {
       adblockEnabled = patch.settings.blockAds;
+    }
+    // 账号信息变化 → 通知内嵌浏览器窗口同步头像 / 昵称
+    if (patch && Object.prototype.hasOwnProperty.call(patch, 'user')) {
+      browserWins.forEach((w) => {
+        try { if (!w.isDestroyed() && w.webContents !== e.sender) w.webContents.send('user:changed', next.user || null); } catch (er) { /* ignore */ }
+      });
+    }
+    // 其他窗口写入书签 / 历史（例如云同步）→ 让浏览器窗口刷新，避免旧数据覆盖
+    const BROWSER_KEYS = ['bookmarks', 'bookmarkFolders', 'history'];
+    if (patch && BROWSER_KEYS.some((k) => Object.prototype.hasOwnProperty.call(patch, k))) {
+      browserWins.forEach((w) => {
+        try { if (!w.isDestroyed() && w.webContents !== e.sender) w.webContents.send('store:changed', patch); } catch (er) { /* ignore */ }
+      });
     }
     return next;
   });

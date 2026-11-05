@@ -5,6 +5,7 @@
 
 const BASE_KEY = 'anywhere-auth-base';
 const TOKEN_KEY = 'anywhere-auth-token';
+const ACCOUNTS_KEY = 'anywhere-accounts';
 
 export const DEFAULT_AUTH_BASE = 'https://anywhere-ai.chuyanyang666.workers.dev';
 
@@ -135,6 +136,76 @@ export async function pullSync() {
 
 export async function pushSync(data) {
   return request('/auth/sync', { method: 'PUT', body: { data } });
+}
+
+/* ---------- 多账号：本机记住登录过的账号，可快速切换 ---------- */
+
+function accountId(user) {
+  return String((user && (user.id || user.email)) || '');
+}
+
+export function getAccounts() {
+  try {
+    const raw = localStorage.getItem(ACCOUNTS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((a) => a && a.id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAccounts(list) {
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(list.slice(0, 8))); } catch {}
+}
+
+/** 把当前账号（含会话 token）记进本机账号列表，供下次一键切换 */
+export function rememberAccount(user) {
+  const id = accountId(user);
+  if (!id) return;
+  const token = getAuthToken();
+  if (!token) return;
+  const rec = {
+    id,
+    email: user.email || '',
+    nickname: user.nickname || '',
+    avatar: user.avatar || '',
+    plan: user.plan || 'free',
+    token,
+    savedAt: Date.now(),
+  };
+  const list = getAccounts().filter((a) => a.id !== id);
+  list.unshift(rec);
+  writeAccounts(list);
+}
+
+export function forgetAccount(id) {
+  writeAccounts(getAccounts().filter((a) => a.id !== id));
+}
+
+export function activeAccountId() {
+  const token = getAuthToken();
+  if (!token) return '';
+  const hit = getAccounts().find((a) => a.token === token);
+  return hit ? hit.id : '';
+}
+
+/** 切换到本机记住的账号：换 token 后向服务端确认是否仍有效 */
+export async function switchAccount(id) {
+  const hit = getAccounts().find((a) => a.id === id);
+  if (!hit) throw Object.assign(new Error('账号不存在'), { code: 'NOT_SAVED' });
+  setAuthToken(hit.token);
+  try {
+    const user = await fetchMe();
+    rememberAccount(user);
+    return user;
+  } catch (e) {
+    if (e?.status === 401) {
+      forgetAccount(id);
+      setAuthToken('');
+      throw Object.assign(new Error('登录已过期，请重新输入密码'), { code: 'UNAUTHORIZED' });
+    }
+    throw e;
+  }
 }
 
 // 供 billing 等模块复用同一套鉴权/错误处理
