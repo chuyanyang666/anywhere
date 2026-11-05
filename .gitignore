@@ -32,7 +32,6 @@ _backup/
 ui-audit/
 ui-shots/
 *.pdf
-index.html
 sites-by-category.csv
 sites-categorized.html
 wrangler.toml
