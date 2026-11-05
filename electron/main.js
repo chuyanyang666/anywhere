@@ -39,6 +39,12 @@ function readLog(file) {
   }
 }
 
+// 应用图标：源码运行时 Windows 任务栏默认显示 electron.exe 的图标，
+// 这里统一用 nativeImage 在创建窗口后再 setIcon 一次，强制覆盖任务栏图标。
+const APP_ICON_PATH = path.join(__dirname, '..', 'public', 'assets', 'icons', 'app-icon.png');
+const appIcon = () => nativeImage.createFromPath(APP_ICON_PATH);
+
+
 // 崩溃上报（本地方案）：内存环形缓冲 + 追加 crash.log，不上传任何数据。
 // 设置页「导出诊断日志」会把这份缓冲一起打包，方便定位闪退。
 const CRASH_BUFFER_MAX = 300;
@@ -327,7 +333,7 @@ function createMainWindow() {
     show: false,
     hasShadow: true,
     roundedCorners: true,
-    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'app-icon.png'),
+    icon: APP_ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -337,6 +343,7 @@ function createMainWindow() {
     },
   });
   Menu.setApplicationMenu(null);
+  mainWin.setIcon(appIcon());
 
   // 舞台固定 1088×754 等比缩放，窗口比例不匹配时两侧/上下会留黑边（"空白窗口边界"）。
   // 锁死窗口比例为舞台比例，并把"最大化"改成"按舞台比例铺满工作区"，
@@ -346,6 +353,24 @@ function createMainWindow() {
 
   if (DEV_URL) mainWin.loadURL(DEV_URL);
   else mainWin.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+
+  // 页面加载失败时窗口默认永远不会 show（ready-to-show 不触发），
+  // 用户看到的就是「双击没反应」。这里兜底显示一条可读的错误信息。
+  let loadErrorShown = false;
+  mainWin.webContents.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
+    if (!isMainFrame || loadErrorShown || code === -3) return; // -3 = 主动中止（正常导航）
+    loadErrorShown = true;
+    appendLog('main.log', 'ERROR', `did-fail-load ${code} ${desc} ${url}`);
+    const html = `<div style="font-family:system-ui;background:#141019;color:#d9cfe8;height:100vh;display:flex;align-items:center;justify-content:center">
+      <div style="max-width:560px;padding:24px">
+        <div style="font-size:18px;margin-bottom:10px">界面加载失败</div>
+        <div style="font-size:12px;line-height:1.7;opacity:.8">${escHtml(desc || '')} (${code})</div>
+        <div style="font-size:12px;line-height:1.7;opacity:.6;margin-top:12px">请尝试重新安装，或把日志目录里的 main.log 发给我们：<br>${escHtml(path.join(app.getPath('userData'), 'logs'))}</div>
+        <button onclick="location.reload()" style="margin-top:18px;padding:8px 16px;border-radius:8px;border:none;background:#7c4dff;color:#fff;cursor:pointer">重试</button>
+      </div></div>`;
+    try { mainWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`); } catch {}
+    try { mainWin.show(); } catch {}
+  });
 
   mainWin.once('ready-to-show', () => {
     mainWin.show();
@@ -427,7 +452,7 @@ function createBrowserWindow(url, { incognito = false, isNewWindow = false, urls
     backgroundColor: '#00000000',
     show: false,
     hasShadow: true,
-    icon: path.join(__dirname, '..', 'public', 'assets', 'icons', 'app-icon.png'),
+    icon: APP_ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -438,6 +463,7 @@ function createBrowserWindow(url, { incognito = false, isNewWindow = false, urls
     },
   });
   browserWins.add(win);
+  win.setIcon(appIcon());
   if (url) browserUrlMap.set(url, win);
   appendLog('main.log', 'INFO', `browser window created (${url || 'blank'}, total=${browserWins.size})`);
   // 普通窗口作为"共用标签窗口"，无痕/显式新窗口不参与复用
@@ -499,6 +525,15 @@ function createBrowserWindow(url, { incognito = false, isNewWindow = false, urls
   win.loadFile(path.join(__dirname, 'browser.html'), { query: Object.fromEntries(q) });
   win.once('ready-to-show', () => win.show());
   return win;
+}
+
+// 从命令行参数里提取 http(s) 链接（系统默认浏览器场景：飞书/微信点开链接 → Windows 把 URL 作为参数启动本程序）
+function extractUrlFromArgv(argv) {
+  if (!Array.isArray(argv)) return '';
+  for (const a of argv) {
+    if (typeof a === 'string' && /^https?:\/\//i.test(a)) return a;
+  }
+  return '';
 }
 
 // 打开站点：优先复用同一个浏览器窗口，以标签页形式追加
@@ -1241,6 +1276,31 @@ function setupIpc() {
     return true;
   });
 
+  // 设为系统默认浏览器：重新注册协议候选，并打开 Windows 默认应用设置页让用户手动选择
+  // （Win10+ 不允许程序自行修改 http/https 默认关联，必须用户在设置里点选）
+  ipcMain.handle('browser:setDefault', async () => {
+    try {
+      app.setAsDefaultProtocolClient('http');
+      app.setAsDefaultProtocolClient('https');
+    } catch {}
+    try {
+      await shell.openExternal('ms-settings:defaultapps');
+    } catch {}
+    return true;
+  });
+
+  ipcMain.handle('browser:isDefault', () => {
+    // Windows 没有可靠的"我是否是默认浏览器"查询 API，这里只判断协议是否已注册到本程序
+    try {
+      return {
+        http: app.isDefaultProtocolClient('http'),
+        https: app.isDefaultProtocolClient('https'),
+      };
+    } catch {
+      return { http: false, https: false };
+    }
+  });
+
   ipcMain.handle('dialog:pickWallpaper', async () => {
     const r = await dialog.showOpenDialog(mainWin, {
       title: '选择背景图片',
@@ -1621,21 +1681,42 @@ if (!gotLock) {
   app.quit();
 } else {
   appendLog('main.log', 'INFO', `app boot: packaged=${app.isPackaged} defaultApp=${!!process.defaultApp} version=${app.getVersion()}`);
-  app.on('second-instance', () => {
+  app.on('second-instance', (_e, argv) => {
     if (mainWin) {
       if (mainWin.isMinimized()) mainWin.restore();
       mainWin.focus();
     }
+    // 外部程序（飞书/微信等）通过默认浏览器打开链接 → argv 里带 URL
+    const url = extractUrlFromArgv(argv);
+    if (url) {
+      appendLog('main.log', 'INFO', `second-instance open url: ${url}`);
+      openInSharedBrowser(url);
+    }
+  });
+  // macOS 自定义协议 / URL Scheme
+  app.on('open-url', (_e, url) => {
+    if (/^https?:\/\//i.test(url)) openInSharedBrowser(url);
   });
   app.whenReady().then(async () => {
     app.setAppUserModelId('com.anywhere.desktop');
+    // 注册为 http/https 协议候选（仅注册，真正成为默认浏览器仍需用户在系统设置里选择）
+    try {
+      app.setAsDefaultProtocolClient('http');
+      app.setAsDefaultProtocolClient('https');
+    } catch {}
     setupIpc();
     applyDownloadDir(readData().settings?.browser?.downloadDir);
     setupAdblock();
     setupDownloads();
-    await loadSavedExtensions();
+    try { await loadSavedExtensions(); } catch (e) { appendLog('main.log', 'ERROR', `load extensions failed: ${e.message}`); }
     createMainWindow();
     registerHotkeys();
+    // 首次启动时如果命令行带 URL（被设为默认浏览器后从外部点开链接），在内嵌浏览器打开
+    const initialUrl = extractUrlFromArgv(process.argv);
+    if (initialUrl) {
+      appendLog('main.log', 'INFO', `initial open url: ${initialUrl}`);
+      setTimeout(() => openInSharedBrowser(initialUrl), 1200);
+    }
     // 安装包环境：启动后静默检查一次更新（失败只记日志，不打扰用户）
     if (!process.defaultApp && hasUpdateConfig()) {
       setTimeout(() => { try { getUpdater()?.checkForUpdates().catch(() => {}); } catch {} }, 8000);

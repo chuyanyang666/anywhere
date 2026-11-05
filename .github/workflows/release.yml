@@ -1,17 +1,16 @@
 # ANYWHERE Release Workflow
 #
-# 触发方式：推送 git tag （形如 v1.0.0）
-# 流程：构建 Windows NSIS 安装包 → 上传未签名包 → 提交给 SignPath Foundation 免费签名
-#       → 下载签名包 → 重算 latest.yml → 发布 GitHub Release
+# 触发方式：推送 git tag（形如 v1.0.0），或在 Actions 页面手动运行
+# 流程：构建 Windows NSIS 安装包 →（可选）SignPath 签名 → 重算 latest.yml → 发布 GitHub Release
 #
 # 自动更新：客户端从 GitHub Releases 读取 latest.yml（electron-updater github provider），
 # 不需要自建更新服务器。
 #
-# SignPath Foundation 申请地址：https://signpath.org/apply
-# 申请通过后，在 GitHub 仓库 Settings → Secrets and variables → Actions 中添加：
+# 签名是可选的：没有配置 Secret 时自动跳过，直接发布未签名安装包。
+# SignPath Foundation 申请通过后，在仓库 Settings → Secrets and variables → Actions 添加：
 #   SIGNPATH_API_TOKEN        — SignPath 控制台的 CI API Token
-#   SIGNPATH_ORGANIZATION_ID  — SignPath 组织 UUID（申请后 SignPath 邮件里会给）
-#   SIGNPATH_PROJECT_SLUG     — SignPath 项目 slug（申请时你起的名字）
+#   SIGNPATH_ORGANIZATION_ID  — SignPath 组织 UUID
+#   SIGNPATH_PROJECT_SLUG     — SignPath 项目 slug
 #   SIGNPATH_SIGNING_POLICY   — 先用 test-signing 测试，上线时改成 release-signing
 
 name: Release
@@ -20,12 +19,13 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,35 +38,17 @@ jobs:
       - name: 安装依赖
         run: npm ci
 
-      - name: 构建 Windows 安装包（未签名）
+      - name: 构建 Windows 安装包
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           npm run dist:ci
-          $exe = Get-ChildItem -Path release -Filter "anywhere-setup.exe"
-          if (-not $exe) { Write-Error "未找到 NSIS 安装包"; exit 1 }
+          if (-not (Test-Path release/anywhere-setup.exe)) { Write-Error "未找到 NSIS 安装包"; exit 1 }
           if (-not (Test-Path release/latest.yml)) { Write-Error "未找到 latest.yml"; exit 1 }
 
-      - name: 上传未签名安装包
-        uses: actions/upload-artifact@v4
-        with:
-          name: anywhere-setup-unsigned
-          path: |
-            release/anywhere-setup.exe
-            release/latest.yml
-          if-no-files-found: error
-
-  sign:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: 下载未签名安装包
-        uses: actions/download-artifact@v4
-        with:
-          name: anywhere-setup-unsigned
-          path: unsigned
-
-      - name: 提交给 SignPath 签名
+      - name: 提交给 SignPath 签名（未配置时跳过）
+        id: sign
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
         uses: signpath/github-action-submit-signing-request@v1
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -75,7 +57,7 @@ jobs:
           signing-policy: ${{ secrets.SIGNPATH_SIGNING_POLICY }}
           artifact-config: |
             [{
-              "path": "unsigned/anywhere-setup.exe",
+              "path": "release/anywhere-setup.exe",
               "signNextBuild": true,
               "description": "ANYWHERE Windows NSIS installer"
             }]
@@ -83,38 +65,11 @@ jobs:
           max-wait: 1200
           output-directory: signed
 
-      - name: 上传已签名安装包
-        uses: actions/upload-artifact@v4
-        with:
-          name: anywhere-setup-signed
-          path: signed/*.exe
-          if-no-files-found: error
-
-  release:
-    needs: [build, sign]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: 下载已签名安装包
-        uses: actions/download-artifact@v4
-        with:
-          name: anywhere-setup-signed
-          path: release
-
-      - name: 下载 latest.yml
-        uses: actions/download-artifact@v4
-        with:
-          name: anywhere-setup-unsigned
-          path: meta
-
-      - name: 重算 latest.yml（签名改变了文件字节）
+      - name: 使用已签名安装包并重算 latest.yml
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        shell: bash
         run: |
-          cp meta/latest.yml release/latest.yml
+          cp signed/anywhere-setup.exe release/anywhere-setup.exe
           node scripts/postsign-latest.mjs release/latest.yml release/anywhere-setup.exe
 
       - name: 创建 GitHub Release
@@ -124,9 +79,10 @@ jobs:
           body: |
             ## ANYWHERE ${{ github.ref_name }}
 
-            查看完整更新日志：https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
+            MIT 许可证 · 内嵌浏览器 · 素材库 · 内容流 · 跨站搜索矩阵
 
-            关于本软件：MIT 许可证 · 内嵌浏览器 · 素材库 · RSS · 跨站搜索矩阵
+            **安装说明**：安装包暂未做代码签名，Windows 可能提示「未知发布者」，
+            点击「更多信息」→「仍要运行」即可。
           files: |
             release/anywhere-setup.exe
             release/latest.yml

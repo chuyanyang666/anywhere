@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('api', {
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   openBrowser: (payload) => ipcRenderer.invoke('open:browser', payload),
   newBrowserWindow: (url) => ipcRenderer.invoke('browser:newWindow', url),
+  setDefaultBrowser: () => ipcRenderer.invoke('browser:setDefault'),
+  isDefaultBrowser: () => ipcRenderer.invoke('browser:isDefault'),
   pickWallpaper: () => ipcRenderer.invoke('dialog:pickWallpaper'),
   exportBackup: (data) => ipcRenderer.invoke('backup:export', data),
   importBackup: () => ipcRenderer.invoke('backup:import'),

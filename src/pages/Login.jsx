@@ -115,7 +115,14 @@ export default function Login({ onSuccess, onOffline }) {
             />
           </div>
 
-          {err && <div className="login-err">{err}</div>}
+          {err && (
+            <div className="login-err">
+              {err}
+              {err.includes('无法连接登录服务器') && (
+                <span className="login-err-tip">当前网络可能无法访问 workers.dev，可在下方「服务器设置」里换成你自己的地址</span>
+              )}
+            </div>
+          )}
 
           <button className="login-btn" type="submit" disabled={busy}>
             {busy ? '处理中…' : mode === 'login' ? '登录' : '创建账号'}
@@ -128,9 +135,9 @@ export default function Login({ onSuccess, onOffline }) {
         </div>
         <div className="login-hint">手机号 / 微信登录即将开放，当前可用邮箱账号</div>
 
-        {netFail && onOffline && (
-          <button type="button" className="login-offline" onClick={onOffline}>
-            服务器连接失败，先离线使用（数据仅存本机）
+        {onOffline && (
+          <button type="button" className={`login-offline ${netFail ? 'strong' : ''}`} onClick={onOffline}>
+            {netFail ? '服务器连接失败，先离线使用（数据仅存本机）' : '跳过登录，先离线使用（数据仅存本机）'}
           </button>
         )}
 

@@ -38,12 +38,19 @@ export default function Settings() {
   const [appInfo, setAppInfo] = useState(null);
   const [updateMsg, setUpdateMsg] = useState(null);
   const [updateBusy, setUpdateBusy] = useState(false);
+  const [isDefaultBrowser, setIsDefaultBrowser] = useState(null);
   const [diag, setDiag] = useState(null);
 
   useEffect(() => {
     window.api?.appInfo?.().then(setAppInfo).catch(() => {});
     window.api?.diagnosticsSummary?.().then(setDiag).catch(() => {});
+    window.api?.isDefaultBrowser?.().then(setIsDefaultBrowser).catch(() => {});
   }, []);
+
+  const setDefault = async () => {
+    await window.api?.setDefaultBrowser?.();
+    setTimeout(() => window.api?.isDefaultBrowser?.().then(setIsDefaultBrowser).catch(() => {}), 4000);
+  };
 
   const pickWallpaper = async () => {
     const b64 = await window.api?.pickWallpaper?.();
@@ -435,6 +442,19 @@ export default function Settings() {
             </span>
           </div>
           {updateMsg && <div className={`test-result ${updateMsg.ok ? 'ok' : 'bad'}`}>{updateMsg.text}</div>}
+          <div className="set-row">
+            <span className="set-label">默认浏览器<small>设为默认后，飞书/微信等点开的链接会在内嵌浏览器打开</small></span>
+            <span className="set-ctl">
+              {isDefaultBrowser?.http && isDefaultBrowser?.https ? (
+                <span style={{ fontSize: 7, color: '#6fd0a1' }}>✓ 已是默认</span>
+              ) : (
+                <button className="btn-ghost" style={{ height: 24, padding: '0 10px', fontSize: 7 }} onClick={setDefault}>
+                  设为默认浏览器
+                </button>
+              )}
+            </span>
+          </div>
+          <div className="set-note">点击后会打开 Windows「默认应用」设置页，请在「Web 浏览器」里选择 ANYWHERE。</div>
           <div className="set-row">
             <span className="set-label">崩溃记录<small>环形缓冲仅保存在本机日志目录</small></span>
             <span className="set-ctl" style={{ fontSize: 7, color: '#a99bb8' }}>

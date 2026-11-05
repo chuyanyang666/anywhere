@@ -7,7 +7,7 @@ const BASE_KEY = 'anywhere-auth-base';
 const TOKEN_KEY = 'anywhere-auth-token';
 const ACCOUNTS_KEY = 'anywhere-accounts';
 
-export const DEFAULT_AUTH_BASE = 'https://anywhere-ai.chuyanyang666.workers.dev';
+export const DEFAULT_AUTH_BASE = 'https://api.myanywhere.fun';
 
 export function getAuthBase() {
   try {
