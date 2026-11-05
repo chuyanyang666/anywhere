@@ -9,6 +9,19 @@ const ACCOUNTS_KEY = 'anywhere-accounts';
 
 export const DEFAULT_AUTH_BASE = 'https://api.myanywhere.fun';
 
+// 自定义域名未生效或线路异常时，回落到 Cloudflare 默认域名
+const FALLBACK_AUTH_BASE = 'https://anywhere-ai.chuyanyang666.workers.dev';
+
+let workingBase = '';
+
+function authCandidates() {
+  const base = getAuthBase();
+  const list = [base];
+  if (base === DEFAULT_AUTH_BASE) list.push(FALLBACK_AUTH_BASE);
+  if (workingBase && !list.includes(workingBase)) list.unshift(workingBase);
+  return list;
+}
+
 export function getAuthBase() {
   try {
     return (localStorage.getItem(BASE_KEY) || DEFAULT_AUTH_BASE).replace(/\/+$/, '');
@@ -70,25 +83,34 @@ export function authErrorText(err) {
 }
 
 async function request(path, { method = 'GET', body, token, timeout = 12000 } = {}) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeout);
   let res;
-  try {
-    res = await fetch(`${getAuthBase()}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token === undefined ? (getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) : token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-  } catch (e) {
+  let lastErr = null;
+  for (const base of authCandidates()) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      res = await fetch(`${base}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token === undefined ? (getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}) : token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      workingBase = base;
+      lastErr = null;
+      break;
+    } catch (e) {
+      lastErr = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  if (lastErr || !res) {
     const err = new Error('NETWORK');
     err.code = 'NETWORK';
     throw err;
-  } finally {
-    clearTimeout(timer);
   }
 
   let data = null;
