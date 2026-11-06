@@ -7,8 +7,10 @@
 <meta name="description" content="ANYWHERE 是面向设计师与知识工作者的桌面工作台：职业站点矩阵、聚合搜索、AI 助手与内嵌浏览器，收进一个窗口。Windows 10/11，MIT 开源。" />
 <meta property="og:title" content="ANYWHERE — 一个入口，通向全网" />
 <meta property="og:description" content="把常用站点、聚合搜索、AI 助手和内嵌浏览器收进一个窗口。" />
-<meta property="og:image" content="./assets/workbench-web.jpg" />
+<meta property="og:image" content="https://myanywhere.fun/assets/workbench-web.jpg" />
+<meta property="og:url" content="https://myanywhere.fun/" />
 <meta property="og:type" content="website" />
+<link rel="canonical" href="https://myanywhere.fun/" />
 <link rel="icon" href="./assets/icon-180.png" />
 <link rel="apple-touch-icon" href="./assets/icon-180.png" />
 <link rel="stylesheet" href="./styles.css" />
@@ -16,12 +18,24 @@
 </head>
 <body>
 
-<header class="nav">
+<!-- 全站宇宙光效：纯装饰，零交互 -->
+<div class="cosmos" aria-hidden="true">
+  <div class="nebula nebula-main"></div>
+  <div class="nebula nebula-blue"></div>
+  <div class="nebula nebula-cyan"></div>
+  <div class="orbit orbit-1"></div>
+  <div class="orbit orbit-2"></div>
+  <div class="orbit orbit-3"></div>
+  <div class="stars"></div>
+  <div class="grid-lines"></div>
+</div>
+
+<header class="nav" id="nav">
   <a class="nav-brand" href="#top">
-    <img src="./assets/icon-180.png" alt="" width="26" height="26" />
+    <img src="./assets/icon-180.png" alt="" width="26" height="26" aria-hidden="true" />
     <span>ANYWHERE</span>
   </a>
-  <nav class="nav-links">
+  <nav class="nav-links" aria-label="主导航">
     <a href="#features">功能</a>
     <a href="#browser">浏览器</a>
     <a href="#pricing">价格</a>
@@ -30,198 +44,354 @@
   <a class="nav-cta" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载</a>
 </header>
 
-<main id="top">
+<main id="top" tabindex="-1">
 
-  <section class="hero">
-    <div class="hero-bg" aria-hidden="true"></div>
+  <!-- ① 首屏：最亮最密，居中堆叠 -->
+  <section class="hero" aria-labelledby="hero-heading">
+    <h1 class="sr-only" id="hero-heading">ANYWHERE — 一个入口，通向全网</h1>
     <div class="hero-inner">
-      <a class="hero-brand reveal" href="#top">ANYWHERE</a>
-      <h1 class="hero-title reveal">一个入口，通向全网。</h1>
-      <p class="hero-sub reveal">把常用站点、聚合搜索、AI 助手和内嵌浏览器收进一个窗口。<br class="desktop-only" />少开几十个标签页，少切换几次注意力。</p>
-      <div class="hero-actions reveal">
-        <a class="btn btn-primary" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p class="eyebrow">// ANYWHERE · DESKTOP WORKBENCH</p>
+      <span class="hero-brand" aria-hidden="true">ANYWHERE</span>
+      <p class="hero-slogan">一个入口，通向全网。</p>
+      <p class="hero-sub">把常用站点、聚合搜索、AI 助手和内嵌浏览器收进一个窗口。<br class="desktop-only" />少开几十个标签页，少切换几次注意力。</p>
+      <div class="hero-caps" aria-label="内容规模">
+        <div class="cap"><span class="cap-num" data-stat="sites">5000</span><span class="cap-label">站点</span></div>
+        <div class="cap"><span class="cap-num" data-stat="categories">36</span><span class="cap-label">分类</span></div>
+        <div class="cap"><span class="cap-num" data-stat="roles">25</span><span class="cap-label">职业</span></div>
+      </div>
+    </div>
+
+    <div class="demo-stage">
+      <!-- Demo 窗口：无 JS 或初始化失败时显示静态预览 -->
+      <div class="demo-window" id="demo-window" role="region" aria-label="工作台交互演示">
+        <div class="demo-static" id="demo-static">
+          <img src="./assets/workbench-web.jpg" alt="ANYWHERE 工作台界面（静态预览）" width="1040" height="650" />
+        </div>
+
+        <div class="demo-live" id="demo-live" hidden>
+          <!-- chrome 40px -->
+          <div class="demo-chrome">
+            <span class="dots" aria-hidden="true"><i class="dot dot-r"></i><i class="dot dot-y"></i><i class="dot dot-g"></i></span>
+            <span class="chrome-title">ANYWHERE · WORKBENCH</span>
+            <span class="chrome-spacer" aria-hidden="true"></span>
+          </div>
+
+          <!-- 职业 tab 条 44px -->
+          <div class="demo-roles" role="tablist" aria-label="选择职业" id="role-tablist">
+            <button class="role-tab" type="button" role="tab" id="role-tab-designer" data-role="designer" aria-selected="true" aria-controls="demo-body" tabindex="0" title="切换到该职业，预览常用站点（演示）" style="--dot:#b84dff">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">视觉设计师</span>
+            </button>
+            <button class="role-tab" type="button" role="tab" id="role-tab-dev" data-role="dev" aria-selected="false" aria-controls="demo-body" tabindex="-1" title="切换到该职业，预览常用站点（演示）" style="--dot:#4d7bff">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">开发者</span>
+            </button>
+            <button class="role-tab" type="button" role="tab" id="role-tab-pm" data-role="pm" aria-selected="false" aria-controls="demo-body" tabindex="-1" title="切换到该职业，预览常用站点（演示）" style="--dot:#4ecdc4">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">产品经理</span>
+            </button>
+            <button class="role-tab" type="button" role="tab" id="role-tab-marketing" data-role="marketing" aria-selected="false" aria-controls="demo-body" tabindex="-1" title="切换到该职业，预览常用站点（演示）" style="--dot:#ff6b6b">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">市场营销</span>
+            </button>
+            <button class="role-tab" type="button" role="tab" id="role-tab-ecommerce" data-role="ecommerce" aria-selected="false" aria-controls="demo-body" tabindex="-1" title="切换到该职业，预览常用站点（演示）" style="--dot:#6bcb77">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">电商运营</span>
+            </button>
+            <button class="role-tab" type="button" role="tab" id="role-tab-copywriter" data-role="copywriter" aria-selected="false" aria-controls="demo-body" tabindex="-1" title="切换到该职业，预览常用站点（演示）" style="--dot:#ffd166">
+              <span class="role-dot" aria-hidden="true"></span><span class="role-label">文案创作</span>
+            </button>
+            <div class="role-more" id="role-more">
+              <button class="role-more-btn" type="button" id="role-more-btn" aria-expanded="false" aria-haspopup="true" aria-controls="role-more-panel" aria-label="更多职业">更多</button>
+              <div class="role-more-panel" id="role-more-panel" role="group" aria-label="更多职业" hidden>
+                <button class="role-more-item" type="button" data-role="marketing" style="--dot:#ff6b6b"><span class="role-dot" aria-hidden="true"></span>市场营销</button>
+                <button class="role-more-item" type="button" data-role="ecommerce" style="--dot:#6bcb77"><span class="role-dot" aria-hidden="true"></span>电商运营</button>
+                <button class="role-more-item" type="button" data-role="copywriter" style="--dot:#ffd166"><span class="role-dot" aria-hidden="true"></span>文案创作</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-body" id="demo-body">
+            <!-- 分页 tab 条 40px -->
+            <div class="demo-tabs" role="tablist" aria-label="选择分页" id="page-tablist">
+              <button class="page-tab" type="button" role="tab" data-tab="general" aria-selected="true" aria-controls="matrix-panel" tabindex="0" title="切换到该分页">通用</button>
+              <button class="page-tab" type="button" role="tab" data-tab="aigc" aria-selected="false" aria-controls="matrix-panel" tabindex="-1" title="切换到该分页">AIGC</button>
+              <button class="page-tab" type="button" role="tab" data-tab="efficiency" aria-selected="false" aria-controls="matrix-panel" tabindex="-1" title="切换到该分页">效率</button>
+              <button class="page-tab" type="button" role="tab" data-tab="professional" aria-selected="false" aria-controls="matrix-panel" tabindex="-1" title="切换到该分页">专业</button>
+              <button class="page-tab" type="button" role="tab" data-tab="fun" aria-selected="false" aria-controls="matrix-panel" tabindex="-1" title="切换到该分页">轻娱乐</button>
+            </div>
+
+            <!-- 搜索框行 46px -->
+            <div class="demo-search-row">
+              <form class="search-form" role="search" id="search-form" autocomplete="off">
+                <div class="search-glass">
+                  <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                  <input class="search-input" id="search-input" type="search" placeholder="搜索当前视图站点" aria-label="搜索站点（演示）" aria-describedby="search-help" enterkeyhint="search" title="在当前视图内匹配站点（演示，不联网）" />
+                  <div class="engine-group" role="group" aria-label="演示用搜索引擎">
+                    <button class="engine-pill" type="button" data-engine="baidu" aria-pressed="true" title="选择演示用搜索引擎（不联网）">百度</button>
+                    <button class="engine-pill" type="button" data-engine="bing" aria-pressed="false" title="选择演示用搜索引擎（不联网）">必应</button>
+                    <button class="engine-pill" type="button" data-engine="google" aria-pressed="false" title="选择演示用搜索引擎（不联网）">Google</button>
+                  </div>
+                  <button class="kbd" type="submit" aria-label="在当前视图中定位首个匹配站点">↵</button>
+                </div>
+                <span class="sr-only" id="search-help">演示窗口不联网。输入关键词只会在当前视图的站点卡中做本地匹配；回车只会定位首个匹配的站点卡，不会跳转或打开外站。</span>
+              </form>
+            </div>
+
+            <!-- 站点矩阵：4 列 × 10 张卡，卡高恒定，节点数恒定 -->
+            <div class="demo-matrix" id="matrix-panel" role="group" aria-label="站点矩阵">
+              <button class="site-card" type="button" id="site-0" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-1" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-2" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-3" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-4" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-5" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-6" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-7" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-8" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+              <button class="site-card" type="button" id="site-9" aria-pressed="false"><span class="site-ico" aria-hidden="true"></span><span class="site-text"><span class="site-name"></span><span class="site-domain"></span></span></button>
+            </div>
+
+            <!-- 快捷方式胶囊行 -->
+            <div class="demo-shortcuts" role="group" aria-label="快捷搜索词">
+              <button class="shortcut-pill" type="button" data-tag="去水印" title="填入该关键词并在当前视图匹配">去水印</button>
+              <button class="shortcut-pill" type="button" data-tag="行业报告" title="填入该关键词并在当前视图匹配">行业报告</button>
+              <button class="shortcut-pill" type="button" data-tag="AI绘画" title="填入该关键词并在当前视图匹配">AI绘画</button>
+              <button class="shortcut-pill" type="button" data-tag="电影" title="填入该关键词并在当前视图匹配">电影</button>
+              <button class="shortcut-pill" type="button" data-tag="英语" title="填入该关键词并在当前视图匹配">英语</button>
+              <button class="shortcut-pill" type="button" data-tag="合同模板" title="填入该关键词并在当前视图匹配">合同模板</button>
+            </div>
+
+            <!-- 详情行：固定高度，默认空 -->
+            <div class="demo-detail" id="demo-detail" aria-label="站点详情">
+              <div class="detail-inner" id="detail-inner"></div>
+            </div>
+          </div>
+
+          <!-- 底部状态条 44px -->
+          <div class="demo-status">
+            <span class="status-left"><span data-stat="sites">5000</span> 站点 · <span data-stat="categories">36</span> 分类</span>
+            <span class="status-engine" id="status-engine">当前引擎：百度</span>
+            <span class="status-count" id="status-count">本页 10 个站点</span>
+          </div>
+
+          <div class="demo-scan" id="demo-scan" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <!-- 主 CTA 骑跨窗口下边框中央 -->
+      <div class="demo-cta">
+        <a class="btn-liquid is-primary" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           下载 Windows 版
         </a>
-        <a class="btn btn-ghost" href="https://github.com/chuyanyang666/anywhere" target="_blank" rel="noopener">查看源码</a>
+        <a class="btn-liquid is-ghost" href="https://github.com/chuyanyang666/anywhere" target="_blank" rel="noopener">查看源码</a>
       </div>
-      <p class="hero-meta reveal">Windows 10 / 11 · 64 位 · 约 95 MB · MIT 开源</p>
     </div>
-    <div class="hero-shot reveal">
-      <img src="./assets/workbench-web.jpg" alt="ANYWHERE 工作台界面" loading="eager" />
+
+    <p class="hero-meta">Windows 10 / 11 · 64 位 · 约 95 MB · MIT 开源</p>
+    <div class="sr-only" id="demo-status-live" role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ② 数据脉冲带：最暗最疏 -->
+  <section class="pulse" id="pulse" tabindex="-1" aria-label="内容规模">
+    <div class="wrap">
+      <div class="pulse-grid">
+        <div class="pulse-item reveal"><span class="pulse-num" data-stat="sites">5000</span><span class="pulse-label">站点</span></div>
+        <div class="pulse-item reveal"><span class="pulse-num" data-stat="categories">36</span><span class="pulse-label">分类</span></div>
+        <div class="pulse-item reveal"><span class="pulse-num" data-stat="roles">25</span><span class="pulse-label">职业</span></div>
+      </div>
+    </div>
+    <div class="pulse-cta reveal">
+      <a class="btn-liquid is-primary" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载免费版</a>
     </div>
   </section>
 
-  <section class="statement">
-    <p class="statement-text reveal">
-      你不是缺工具，<br />
-      是缺一个<span class="accent">放工具的地方</span>。
-    </p>
-    <p class="statement-sub reveal">设计、开发、写稿、找素材，一天要在十几个网站之间来回跳。ANYWHERE 把这些入口排成一张你自己的工作台。</p>
-  </section>
-
-  <section class="features" id="features">
-    <div class="sec-head">
-      <span class="sec-label">功能</span>
-      <h2>常用的事，一个窗口做完</h2>
-    </div>
-
-    <div class="feature-row reveal">
-      <div class="feature-copy">
-        <h3>职业站点矩阵</h3>
-        <p>第一次启动选择你的职业，常用站点自动排好。设计师有 Behance、站酷、花瓣，开发有 GitHub、掘金、Stack Overflow。不喜欢就自己改。</p>
-        <ul>
-          <li>20+ 职业预设，一键切换</li>
-          <li>自定义站点、自定义标签页</li>
-          <li>收藏夹与访问频次自动排序</li>
-        </ul>
-      </div>
-      <div class="feature-media">
-        <img src="./assets/workbench-tabs-web.jpg" alt="工作台标签页" loading="lazy" />
-      </div>
-    </div>
-
-    <div class="feature-row reverse reveal">
-      <div class="feature-copy">
-        <h3>聚合搜索引擎</h3>
-        <p>输入一次关键词，同时送进你选定的多个站点。查资料不用再一个个复制粘贴。</p>
-        <ul>
-          <li>按引擎、按站点自由组合</li>
-          <li>支持百度、Google、必应等</li>
-          <li>搜索结果直接在侧边打开</li>
-        </ul>
-      </div>
-      <div class="feature-media">
-        <img src="./assets/engine-web.jpg" alt="聚合引擎界面" loading="lazy" />
-      </div>
-    </div>
-
-    <div class="feature-row reveal">
-      <div class="feature-copy">
-        <h3>AI 助手</h3>
-        <p>内置对话面板，随时问随时用。想用自己的模型，填一个 OpenAI 兼容接口就能接上。</p>
-        <ul>
-          <li>默认提供每日免费额度</li>
-          <li>支持自定义 Base URL / Key / 模型</li>
-          <li>对话可保存，历史可检索</li>
-        </ul>
-      </div>
-      <div class="feature-media">
-        <img src="./assets/ai-web.jpg" alt="AI 助手界面" loading="lazy" />
-      </div>
+  <!-- ③ 声明段：暗 -->
+  <section class="statement" id="statement" tabindex="-1">
+    <div class="wrap">
+      <p class="statement-text reveal">你不是缺工具，<br />是缺一个<span class="accent">放工具的地方</span>。</p>
+      <p class="statement-sub reveal">设计、开发、写稿、找素材，一天要在十几个网站之间来回跳。ANYWHERE 把这些入口排成一张你自己的工作台。</p>
     </div>
   </section>
 
-  <section class="browser" id="browser">
-    <div class="sec-head">
-      <span class="sec-label">内嵌浏览器</span>
-      <h2>站点点开就在里面</h2>
-    </div>
-    <div class="browser-grid">
-      <div class="browser-item reveal">
-        <h3>和你的 Chrome 完全隔离</h3>
-        <p>独立浏览器分区，不读取系统 Chrome 的账号和 Cookie。工作账号和生活账号互不打扰。</p>
+  <!-- ④ 功能区：中亮，1 主图 + 2 辅卡 -->
+  <section class="features" id="features" tabindex="-1">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-label">功能</span>
+        <h2>常用的事，一个窗口做完</h2>
       </div>
-      <div class="browser-item reveal">
-        <h3>可以设为默认浏览器</h3>
-        <p>注册 http/https 协议后，在飞书、微信里点链接，直接跳进工作台打开，不再弹出系统浏览器。</p>
+
+      <div class="feature-hero reveal">
+        <div class="feature-hero-frame">
+          <img class="feature-hero-img" src="./assets/workbench-web.jpg" alt="ANYWHERE 工作台站点矩阵界面" loading="lazy" />
+          <div class="feature-badge" aria-label="收录 5000 个站点，36 个分类">
+            <span class="feature-badge-num" data-stat="sites">5000</span>
+            <span class="feature-badge-label">站点 · <span data-stat="categories">36</span> 分类</span>
+          </div>
+        </div>
+        <div class="feature-hero-copy">
+          <h3>职业站点矩阵</h3>
+          <p>第一次启动选择你的职业，常用站点自动排好。设计师有 Behance、站酷、花瓣，开发有 GitHub、掘金、Stack Overflow。不喜欢就自己改。</p>
+          <ul>
+            <li>20+ 职业预设，一键切换</li>
+            <li>自定义站点、自定义标签页</li>
+            <li>收藏夹与访问频次自动排序</li>
+          </ul>
+        </div>
+        <img class="feature-sub-img" src="./assets/workbench-tabs-web.jpg" alt="工作台标签页界面" loading="lazy" aria-hidden="true" />
       </div>
-      <div class="browser-item reveal">
-        <h3>书签、历史、下载齐全</h3>
-        <p>多标签、书签栏、历史记录、下载管理，还带广告与跟踪请求拦截。</p>
-      </div>
-      <div class="browser-item reveal">
-        <h3>密码保险箱</h3>
-        <p>常用站点密码本地加密存储，走 Windows DPAPI，不落明文，不上传云端。</p>
+
+      <div class="feature-side">
+        <article class="feature-card reveal">
+          <div class="feature-media-crop"><img src="./assets/engine-web.jpg" alt="聚合引擎界面" loading="lazy" /></div>
+          <div class="feature-card-body">
+            <h3>聚合搜索引擎</h3>
+            <p>输入一次关键词，同时送进你选定的多个站点。查资料不用再一个个复制粘贴。</p>
+            <ul>
+              <li>按引擎、按站点自由组合</li>
+              <li>支持百度、Google、必应等</li>
+              <li>搜索结果直接在侧边打开</li>
+            </ul>
+          </div>
+        </article>
+        <article class="feature-card reveal">
+          <div class="feature-media-crop"><img src="./assets/ai-web.jpg" alt="AI 助手界面" loading="lazy" /></div>
+          <div class="feature-card-body">
+            <h3>AI 助手</h3>
+            <p>内置对话面板，随时问随时用。想用自己的模型，填一个 OpenAI 兼容接口就能接上。</p>
+            <ul>
+              <li>默认提供每日免费额度</li>
+              <li>支持自定义 Base URL / Key / 模型</li>
+              <li>对话可保存，历史可检索</li>
+            </ul>
+          </div>
+        </article>
       </div>
     </div>
   </section>
 
-  <section class="pricing" id="pricing">
-    <div class="sec-head">
-      <span class="sec-label">价格</span>
-      <h2>免费用，觉得值再升级</h2>
-    </div>
-    <div class="price-grid">
-      <div class="price-col reveal">
-        <div class="price-name">免费版</div>
-        <div class="price-num"><span>¥0</span><em>永久</em></div>
-        <ul>
-          <li>工作台、聚合搜索、内容流</li>
-          <li>内嵌浏览器全部功能</li>
-          <li>收藏 50 个 · 工作空间 3 个</li>
-          <li>AI 每天 20 次</li>
-          <li>数据仅存本机</li>
-        </ul>
-        <a class="btn btn-ghost btn-full" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载免费版</a>
+  <!-- ⑤ 浏览器段：暗，4 张等高玻璃卡 -->
+  <section class="browser" id="browser" tabindex="-1">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-label">内嵌浏览器</span>
+        <h2>站点点开就在里面</h2>
       </div>
-      <div class="price-col featured reveal">
-        <div class="price-name">Pro</div>
-        <div class="price-num"><span>¥12</span><em>/ 月</em></div>
-        <ul>
-          <li>收藏与工作空间不限</li>
-          <li>AI 每天 100 次</li>
-          <li>收藏、书签、历史云端同步</li>
-          <li>多设备共用一份工作台</li>
-          <li>优先响应与问题反馈</li>
-        </ul>
-        <div class="price-alt">¥98 / 年 · 早鸟 ¥68 / 年</div>
-        <a class="btn btn-primary btn-full" href="#contact">获取激活码</a>
+      <div class="browser-grid">
+        <article class="browser-card reveal">
+          <span class="browser-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18M8 6.5h.01M11 6.5h.01" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+          <h3>和你的 Chrome 完全隔离</h3>
+          <p>独立浏览器分区，不读取系统 Chrome 的账号和 Cookie。工作账号和生活账号互不打扰。</p>
+        </article>
+        <article class="browser-card reveal">
+          <span class="browser-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5S14.4 18.2 12 20.5C9.6 18.2 8.4 15.3 8.4 12S9.6 5.8 12 3.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+          <h3>可以设为默认浏览器</h3>
+          <p>注册 http/https 协议后，在飞书、微信里点链接，直接跳进工作台打开，不再弹出系统浏览器。</p>
+        </article>
+        <article class="browser-card reveal">
+          <span class="browser-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><path d="M5 4h11l3 3v13H5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 10h8M8 13h8M8 16h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+          <h3>书签、历史、下载齐全</h3>
+          <p>多标签、书签栏、历史记录、下载管理，还带广告与跟踪请求拦截。</p>
+        </article>
+        <article class="browser-card reveal">
+          <span class="browser-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" focusable="false"><rect x="4" y="10" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="15" r="1.3" fill="currentColor"/></svg></span>
+          <h3>密码保险箱</h3>
+          <p>常用站点密码本地加密存储，走 Windows DPAPI，不落明文，不上传云端。</p>
+        </article>
       </div>
-    </div>
-    <p class="price-note">价格随版本调整，以实际购买页为准。未登录也可离线使用，数据只存本机。</p>
-  </section>
-
-  <section class="faq" id="faq">
-    <div class="sec-head">
-      <span class="sec-label">常见问题</span>
-      <h2>你可能想问</h2>
-    </div>
-    <div class="faq-list">
-      <details class="reveal">
-        <summary>支持哪些系统？</summary>
-        <p>Windows 10 和 Windows 11 的 64 位版本。暂不支持 macOS、Linux 和 32 位系统。</p>
-      </details>
-      <details class="reveal">
-        <summary>安装时提示「未知发布者」怎么办？</summary>
-        <p>当前版本尚未做代码签名，这是 Windows 的正常提示。点击「更多信息」→「仍要运行」即可。如果下载的文件被系统标记为锁定，右键安装包 → 属性 → 勾选「解除锁定」。</p>
-      </details>
-      <details class="reveal">
-        <summary>会读取我 Chrome 里的账号和数据吗？</summary>
-        <p>不会。内嵌浏览器使用独立的浏览器分区，与系统 Chrome 完全隔离，也不读取 Chrome 的 Cookie 和登录状态。</p>
-      </details>
-      <details class="reveal">
-        <summary>不登录能用吗？</summary>
-        <p>可以。登录只是为了云端同步和多设备共用。不登录时所有数据只保存在本机，换电脑需要手动导出导入。</p>
-      </details>
-      <details class="reveal">
-        <summary>我的数据存在哪里？</summary>
-        <p>收藏、书签、历史、密码默认存在本机用户目录，密码用系统级加密。开启云同步后，收藏与工作空间会上传到你自己的账号下，不会用于其他用途。</p>
-      </details>
-      <details class="reveal">
-        <summary>是开源的吗？</summary>
-        <p>是，采用 MIT 许可证，源码在 <a href="https://github.com/chuyanyang666/anywhere" target="_blank" rel="noopener">GitHub</a> 公开。你可以自行编译、修改或二次分发。</p>
-      </details>
     </div>
   </section>
 
-  <section class="cta" id="contact">
+  <!-- ⑥ 价格：亮，Pro 抬升发光。文案逐字锁定，不新增角标 -->
+  <section class="pricing" id="pricing" tabindex="-1">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-label">价格</span>
+        <h2>免费用，觉得值再升级</h2>
+      </div>
+      <div class="price-grid">
+        <div class="price-col is-free reveal">
+          <div class="price-name">免费版</div>
+          <div class="price-num"><span>¥0</span><em>永久</em></div>
+          <ul>
+            <li>工作台、聚合搜索、内容流</li>
+            <li>内嵌浏览器全部功能</li>
+            <li>收藏 50 个 · 工作空间 3 个</li>
+            <li>AI 每天 20 次</li>
+            <li>数据仅存本机</li>
+          </ul>
+          <a class="btn-liquid is-ghost btn-full" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载免费版</a>
+        </div>
+        <div class="price-col is-pro reveal">
+          <div class="price-name">Pro</div>
+          <div class="price-num"><span>¥12</span><em>/ 月</em></div>
+          <ul>
+            <li>收藏与工作空间不限</li>
+            <li>AI 每天 100 次</li>
+            <li>收藏、书签、历史云端同步</li>
+            <li>多设备共用一份工作台</li>
+            <li>优先响应与问题反馈</li>
+          </ul>
+          <div class="price-alt">¥98 / 年 · 早鸟 ¥68 / 年</div>
+          <a class="btn-liquid is-primary btn-full" href="#contact">获取激活码</a>
+        </div>
+      </div>
+      <p class="price-note reveal">价格随版本调整，以实际购买页为准。未登录也可离线使用，数据只存本机。</p>
+    </div>
+  </section>
+
+  <!-- ⑦ FAQ：中低，原生 details/summary -->
+  <section class="faq" id="faq" tabindex="-1">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-label">常见问题</span>
+        <h2>你可能想问</h2>
+      </div>
+      <div class="faq-list">
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">支持哪些系统？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>Windows 10 和 Windows 11 的 64 位版本。暂不支持 macOS、Linux 和 32 位系统。</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">安装时提示「未知发布者」怎么办？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>当前版本尚未做代码签名，这是 Windows 的正常提示。点击「更多信息」→「仍要运行」即可。如果下载的文件被系统标记为锁定，右键安装包 → 属性 → 勾选「解除锁定」。</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">会读取我 Chrome 里的账号和数据吗？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>不会。内嵌浏览器使用独立的浏览器分区，与系统 Chrome 完全隔离，也不读取 Chrome 的 Cookie 和登录状态。</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">不登录能用吗？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>可以。登录只是为了云端同步和多设备共用。不登录时所有数据只保存在本机，换电脑需要手动导出导入。</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">我的数据存在哪里？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>收藏、书签、历史、密码默认存在本机用户目录，密码用系统级加密。开启云同步后，收藏与工作空间会上传到你自己的账号下，不会用于其他用途。</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary><span class="faq-q">是开源的吗？</span><span class="faq-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14" focusable="false"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span></summary>
+          <p>是，采用 MIT 许可证，源码在 <a href="https://github.com/chuyanyang666/anywhere" target="_blank" rel="noopener">GitHub</a> 公开。你可以自行编译、修改或二次分发。</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑧ 尾部 CTA：第二光峰 -->
+  <section class="cta" id="contact" tabindex="-1">
     <div class="cta-inner">
       <h2 class="reveal">今天就把它装进桌面</h2>
       <p class="reveal">Windows 10 / 11 · 约 95 MB · 安装后即可离线使用</p>
       <div class="hero-actions reveal">
-        <a class="btn btn-primary" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载安装包</a>
-        <a class="btn btn-ghost" href="mailto:chuyanyang666@gmail.com">反馈与购买咨询</a>
+        <a class="btn-liquid is-primary" href="https://github.com/chuyanyang666/anywhere/releases/latest" target="_blank" rel="noopener">下载安装包</a>
+        <a class="btn-liquid is-ghost" href="mailto:chuyanyang666@gmail.com">反馈与购买咨询</a>
       </div>
     </div>
   </section>
 
 </main>
 
-<footer class="footer">
+<!-- ⑨ 页脚：暗 -->
+<footer class="footer" id="footer">
   <div class="footer-inner">
     <div class="footer-brand">
-      <img src="./assets/icon-180.png" alt="" width="24" height="24" />
+      <img src="./assets/icon-180.png" alt="" width="24" height="24" aria-hidden="true" />
       <span>ANYWHERE</span>
     </div>
     <div class="footer-links">
