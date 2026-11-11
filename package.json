@@ -1,6 +1,6 @@
 {
   "name": "anywhere-desktop",
-  "version": "1.0.0",
+  "version": "1.1.6",
   "license": "MIT",
   "copyright": "Copyright © 2025 ANYWHERE",
   "private": true,
@@ -12,9 +12,10 @@
     "dev:web": "vite",
     "build": "vite build",
     "start": "electron .",
-    "dist": "vite build && electron-builder --win nsis",
-    "dist:ci": "vite build && electron-builder --win nsis --publish never",
-    "pack": "vite build && electron-builder --win --dir",
+    "dist": "vite build && node scripts/prepare-runtime.js && electron-builder --win nsis --publish never",
+    "dist:ci": "vite build && node scripts/prepare-runtime.js && electron-builder --win nsis --publish never",
+    "dist:portable": "vite build && node scripts/prepare-runtime.js && electron-builder --win zip --config.artifactName=anywhere-${version}-portable.zip --publish never",
+    "pack": "vite build && node scripts/prepare-runtime.js && electron-builder --win --dir",
     "test:e2e": "node scripts/tests/regression.mjs"
   },
   "dependencies": {
@@ -48,7 +49,14 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "public/**/*"
+      "public/**/*",
+      "src/data/**/*"
+    ],
+    "extraFiles": [
+      {
+        "from": "build/runtime",
+        "to": "."
+      }
     ],
     "win": {
       "target": "nsis",
