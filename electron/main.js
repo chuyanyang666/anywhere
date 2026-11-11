@@ -4,9 +4,58 @@ const fs = require('fs');
 const https = require('https');
 
 app.setName('ANYWHERE');
+// 开发模式与安装版的数据完全隔离：dev 用 ANYWHERE-dev 目录，
+// 避免开发机的测试数据（收藏/搜索记录/localStorage）混进打包成品的验收。
+// 注意：某些构建配置下 `electron .` 的 app.isPackaged 也会是 true，
+// process.defaultApp 才是「用 electron 直接跑源码」的可靠标志。
+if (process.defaultApp || !app.isPackaged) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'ANYWHERE-dev'));
+}
 
 const DEV_URL = process.env.VITE_DEV_SERVER_URL;
 let mainWin = null;
+
+/* ---------- 启动自检 / 安全模式 ---------- */
+
+// 上一次启动时 GPU 子进程反复崩溃，就在这里打标记：下次直接禁用硬件加速，
+// 避免「同一台电脑每次打开都是黑窗」的循环。
+const SAFE_MODE_FLAG = () => path.join(app.getPath('userData'), 'disable-gpu.flag');
+let safeMode = false;
+try { safeMode = fs.existsSync(SAFE_MODE_FLAG()); } catch {}
+if (safeMode) {
+  app.disableHardwareAcceleration();
+}
+
+// 打包版必须随包携带的 Chromium 运行文件：缺任何一个，子进程都会以
+// 0xC0000135（找不到 DLL）秒崩，用户看到的就是「进程在跑但没有窗口」。
+function missingRuntimeFiles() {
+  if (!app.isPackaged) return [];
+  const dir = path.dirname(app.getPath('exe'));
+  const need = ['ffmpeg.dll', 'libEGL.dll', 'libGLESv2.dll', 'd3dcompiler_47.dll', 'vk_swiftshader.dll', 'vulkan-1.dll'];
+  const missing = need.filter((f) => !fs.existsSync(path.join(dir, f)));
+  const sysRoot = process.env.SystemRoot || 'C:\\Windows';
+  if (!fs.existsSync(path.join(sysRoot, 'System32', 'ucrtbase.dll'))) {
+    missing.push('系统运行库 C:\\Windows\\System32\\ucrtbase.dll');
+  }
+  return missing;
+}
+
+function reportMissingRuntime(missing) {
+  const dir = path.dirname(app.getPath('exe'));
+  dialog.showErrorBox(
+    'ANYWHERE 缺少运行库文件',
+    `安装目录缺少以下文件，界面无法加载：\n\n${missing.map((m) => '· ' + m).join('\n')}\n\n` +
+      `安装目录：${dir}\n\n` +
+      `最常见的原因：\n` +
+      `1. 杀毒软件把安装目录里的 DLL 隔离了（360 / 火绒 / Defender 都会）；\n` +
+      `2. 系统是被裁剪过的「精简版 Windows」，缺少 UCRT 运行库。\n\n` +
+      `处理办法：\n` +
+      `1. 把 ${dir} 加入杀毒软件白名单，卸载后重新安装；\n` +
+      `2. 安装微软运行库 https://aka.ms/vs/17/release/vc_redist.x64.exe 后重启；\n` +
+      `3. 仍然不行，把日志发给我们：${path.join(app.getPath('userData'), 'logs')}`
+  );
+}
+
 const browserWins = new Set();
 const browserUrlMap = new Map();
 const MAX_BROWSER_WINS = 12;
@@ -85,10 +134,26 @@ app.on('render-process-gone', (_e, wc, details) => {
     setTimeout(() => app.exit(0), 1500);
   }
 });
+let gpuCrashCount = 0;
 app.on('child-process-gone', (_e, details) => {
-  appendLog('main.log', 'CHILD_GONE', `name=${details.name} reason=${details.reason} exitCode=${details.exitCode}`);
-  recordCrash('child-process-gone', `name=${details.name} reason=${details.reason} exitCode=${details.exitCode}`);
-  if (details.reason === 'crashed' && String(details.name).toLowerCase().includes('network')) {
+  const d = details || {};
+  // details.type 才是区分 GPU / Utility / NetworkService 的字段，name 常常是 undefined
+  const desc = `type=${d.type || ''} name=${d.name || ''} service=${d.serviceName || ''} reason=${d.reason} exitCode=${d.exitCode}`;
+  appendLog('main.log', 'CHILD_GONE', desc);
+  recordCrash('child-process-gone', desc);
+
+  // GPU 连续崩溃：写入安全模式标记，下次启动禁用硬件加速，避免一直黑窗
+  if (d.reason === 'crashed' && d.type === 'GPU' && !safeMode) {
+    gpuCrashCount += 1;
+    if (gpuCrashCount >= 2) {
+      try {
+        fs.writeFileSync(SAFE_MODE_FLAG(), `gpu crashed ${gpuCrashCount} times\n`, 'utf8');
+        appendLog('main.log', 'WARN', 'GPU 连续崩溃，已写入安全模式标记，下次启动将禁用硬件加速');
+      } catch {}
+    }
+  }
+
+  if (d.reason === 'crashed' && String(d.name || '').toLowerCase().includes('network')) {
     appendLog('main.log', 'FATAL', 'child network crashed, relaunching...');
     setTimeout(() => app.relaunch({ args: process.argv.slice(1) }), 300);
     setTimeout(() => app.exit(0), 1500);
@@ -99,14 +164,16 @@ const DEFAULT_DATA = {
   version: 1,
   installedAt: Date.now(),
   onboarded: false,
+  // 未登录 = 没有任何账号信息，内嵌浏览器也不保留站点登录态
+  user: null,
   profile: { roleId: 'designer', customRole: null, customRoleSites: [] },
   settings: {
-    theme: 'violet',
+    theme: 'ocean',
     wallpaper: 'aurora',
     wallpaperCustom: null,
     glass: 1,
     motion: true,
-    blur: 22,
+    blur: 0,
     city: '北京',
     latitude: 39.9042,
     longitude: 116.4074,
@@ -114,7 +181,7 @@ const DEFAULT_DATA = {
     openMode: 'browser',
     showWeather: true,
     clock24: true,
-    wallpaperDim: 0.55,
+    wallpaperDim: 0.5,
     browser: {
       home: '',
       restore: true,
@@ -130,11 +197,12 @@ const DEFAULT_DATA = {
       temperature: 0.7,
     },
   },
-  favorites: ['zcool', 'behance', 'dribbble', 'figma', 'uisdc', 'huaban', 'mastergo', 'gaoding', 'canva', 'iconfont', 'notion', 'github', 'bilibili', 'douyin', 'xiaohongshu', 'zhihu', 'juejin', 'woshipm', 'kimi', 'doubao'],
+  // 出厂零数据：收藏与搜索记录由新用户自己建立
+  favorites: [],
   customSites: [],
   customTabs: [],
   todos: { date: '', items: [] },
-  recentSearches: ['去水印', '行业报告', 'AI绘画', '电影', '英语', '合同模板'],
+  recentSearches: [],
   visits: [],
   notifications: [
     { id: 'n1', title: '欢迎来到 ANYWHERE', body: '一个入口，通向全网。先从选择你的职业开始。', time: Date.now(), read: false },
@@ -205,6 +273,28 @@ function escHtml(s = '') {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* 探测本地 Vite 是否在跑：非打包启动时用它决定加载 dev server 还是 dist。
+   用 TCP 连接而不是发 HTTP 请求——Vite 首次请求要现编译，几百毫秒都可能超时；
+   本机 Vite 可能只监听 IPv6 的 ::1，所以两个回环地址都试。 */
+function probeDevServer(port = 5173, timeout = 600) {
+  return new Promise((resolve) => {
+    const net = require('net');
+    const tryHost = (hosts, i) => {
+      if (i >= hosts.length) return resolve(false);
+      const sock = net.connect({ port, host: hosts[i] });
+      const done = (ok) => {
+        try { sock.destroy(); } catch {}
+        if (ok) resolve(true);
+        else tryHost(hosts, i + 1);
+      };
+      sock.once('connect', () => done(true));
+      sock.once('error', () => done(false));
+      sock.setTimeout(timeout, () => done(false));
+    };
+    tryHost(['127.0.0.1', '::1'], 0);
+  });
+}
+
 function normalizeOrigin(site = '') {
   try {
     const s = String(site).trim();
@@ -245,6 +335,28 @@ function allSessions() {
   try { out.push(session.fromPartition('persist:anywhere')); } catch {}
   try { out.push(session.fromPartition('anywhere-incognito')); } catch {}
   return out;
+}
+
+/* ---------- 内嵌浏览器的站点登录态跟随 ANYWHERE 账号 ---------- */
+
+// 未登录 / 切换账号时必须清掉内嵌浏览器里的 cookie 等站点数据，
+// 否则上一个账号在 B 站、知乎登录过的状态会直接暴露给下一个人。
+// 注意：只能清内嵌浏览器的分区，不能清 defaultSession —— 主窗口自己的登录 token
+// 和本地数据都在 defaultSession 的 localStorage 里，清了会把自己登出。
+async function clearBrowserSiteSessions(reason = '') {
+  const storages = ['cookies', 'localstorage', 'indexdb', 'serviceworkers', 'cachestorage', 'websql', 'filesystem'];
+  for (const p of ['persist:anywhere', 'anywhere-incognito']) {
+    try {
+      const s = session.fromPartition(p);
+      await s.clearStorageData({ storages });
+      try { await s.clearCache(); } catch {}
+    } catch {}
+  }
+  appendLog('main.log', 'INFO', `browser site sessions cleared: ${reason}`);
+  // 已经开着的内嵌浏览器页面重新加载，界面上的登录头像 / 会员状态立刻消失
+  browserWins.forEach((w) => {
+    try { if (!w.isDestroyed()) w.webContents.reload(); } catch {}
+  });
 }
 
 function applyDownloadDir(dir) {
@@ -302,35 +414,38 @@ ${lines.join('\n')}
 `;
 }
 
-function validBounds(b) {
-  if (!b || typeof b.width !== 'number' || typeof b.height !== 'number') return null;
-  try {
-    const ok = screen.getAllDisplays().some((d) => {
-      const a = d.workArea;
-      return b.x < a.x + a.width - 80 && b.x + b.width > a.x + 80 && b.y < a.y + a.height - 60 && b.y + b.height > a.y + 60;
-    });
-    return ok ? b : null;
-  } catch {
-    return null;
-  }
-}
-
 function createMainWindow() {
-  const saved = validBounds(readData().windowBounds);
+  // 逻辑视口恒定 1425×975（UI 调谐器的 113 条像素级微调都以它为参照系，布局绝不能重排）。
+  // 小屏笔记本：窗口物理尺寸等比缩小 + Chromium 整页缩放（baseZoomScale），
+  // 逻辑视口不变，任何屏幕上都是同一套 1:1 布局，只是整体大小不同。
+  const DESIGN_W = 1425;
+  const DESIGN_H = 975;
+  const work = screen.getPrimaryDisplay().workAreaSize;
+  const fitScale = Math.min(1, work.width / DESIGN_W, work.height / DESIGN_H);
+  const winW = Math.round(DESIGN_W * fitScale);
+  const winH = Math.round(DESIGN_H * fitScale);
+  appendLog('main.log', 'INFO', `main window ${winW}x${winH} scale=${fitScale.toFixed(3)} (workArea ${work.width}x${work.height})`);
   mainWin = new BrowserWindow({
-    width: saved?.width || 1440,
-    height: saved?.height || 1000,
-    x: saved?.x,
-    y: saved?.y,
-    minWidth: 1180,
-    minHeight: 760,
+    width: winW,
+    height: winH,
+    center: true,
+    // 窗口锁死尺寸：让 UI 调整器有稳定参照系（1425×975 = 设计稿 1:1），
+    // 元素偏移、圆角、间距等数值都对应真实像素，不会被 transform:scale 二次放大。
+    resizable: false,
+    maxWidth: winW,
+    maxHeight: winH,
+    minWidth: winW,
+    minHeight: winH,
     frame: false,
     // 不用分层透明窗口：Windows 的 Alt+Tab / 任务栏缩略图无法合成透明窗口，
     // 只能抓到一块黑底，导致窗口预览整块发黑。改为不透明，
     // 圆角交给 DWM（roundedCorners）处理。
     transparent: false,
     backgroundColor: '#141019',
-    show: false,
+    // 直接显示，不做 show:false 的延迟显示。
+    // 依赖 ready-to-show 的写法在部分 Win11 + 集显环境下永远等不到，用户看到的就是「没有窗口」。
+    // 有 backgroundColor 兜底，先显示也不会出现白屏闪烁。
+    show: true,
     hasShadow: true,
     roundedCorners: true,
     icon: APP_ICON_PATH,
@@ -345,14 +460,34 @@ function createMainWindow() {
   Menu.setApplicationMenu(null);
   mainWin.setIcon(appIcon());
 
+  // 小屏等比缩小：挂到窗口上，ui:setZoom 会把字号档位乘上这个系数。
+  // 这里先应用一次基础缩放；渲染进程启动后按字号档重设时会自动叠乘。
+  mainWin.baseZoomScale = fitScale;
+  if (fitScale < 1) {
+    try { mainWin.webContents.setZoomFactor(fitScale); } catch {}
+  }
+
   // 舞台固定 1088×754 等比缩放，窗口比例不匹配时两侧/上下会留黑边（"空白窗口边界"）。
   // 锁死窗口比例为舞台比例，并把"最大化"改成"按舞台比例铺满工作区"，
   // 这样窗口边界永远等于内容边界。
-  mainWin.setAspectRatio(STAGE_RATIO);
-  mainWin.setMaximizable(false); // 禁用原生最大化（否则会铺满工作区破坏比例）
+  // 界面已改为 1:1 自适应布局，不再强制宽高比，拖动缩放更顺手
+  mainWin.setMaximizable(false); // 用自定义按钮铺满工作区
 
-  if (DEV_URL) mainWin.loadURL(DEV_URL);
-  else mainWin.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  // 非打包启动（npm start / 直接 electron .）时优先复用已在跑的 Vite：
+  // file://dist 与 http://localhost:5173 是两个不同的 localStorage 源，
+  // 开发期调好的 UI 参数只存在后者，落到 file:// 就会「调好的一下全没了」。
+  if (DEV_URL) {
+    mainWin.loadURL(DEV_URL);
+  } else if (process.defaultApp || !app.isPackaged) {
+    // 注意：某些构建配置下 `electron .` 的 app.isPackaged 也会是 true，
+    // process.defaultApp 才是「用 electron 直接跑源码」的可靠标志
+    probeDevServer().then((up) => {
+      if (up) mainWin.loadURL('http://localhost:5173');
+      else mainWin.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    });
+  } else {
+    mainWin.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+  }
 
   // 页面加载失败时窗口默认永远不会 show（ready-to-show 不触发），
   // 用户看到的就是「双击没反应」。这里兜底显示一条可读的错误信息。
@@ -372,35 +507,32 @@ function createMainWindow() {
     try { mainWin.show(); } catch {}
   });
 
-  mainWin.once('ready-to-show', () => {
-    mainWin.show();
-    if (readData().windowBounds?.maximized) { preFit.set(mainWin, null); fitStage(mainWin); fittedWins.add(mainWin); }
-    else conformStage(mainWin);
-  });
-  mainWin.on('close', () => {
+  // 不能只依赖 ready-to-show：部分笔记本（老集显 / 关闭硬件加速 / 远程桌面）
+  // 首帧迟迟不触发，窗口就一直停在 show:false，表现是「进程在跑但没有窗口」。
+  const reveal = (from) => {
+    if (!mainWin || mainWin.isDestroyed() || mainWin.isVisible()) return;
     try {
-      const b = fittedWins.has(mainWin) ? mainWin.getBounds() : mainWin.getNormalBounds();
-      saveData({ windowBounds: { ...b, maximized: fittedWins.has(mainWin) } });
-      flushData();
+      mainWin.show();
+      mainWin.focus();
+      appendLog('main.log', 'INFO', `main window shown (${from})`);
     } catch (e) {
-      appendLog('main.log', 'ERROR', `save bounds failed: ${e.message}`);
+      appendLog('main.log', 'ERROR', `show failed (${from}): ${e.message}`);
     }
-  });
+  };
+  mainWin.once('ready-to-show', () => reveal('ready-to-show'));
+  mainWin.webContents.once('did-finish-load', () => setTimeout(() => reveal('did-finish-load'), 200));
+  setTimeout(() => reveal('timeout'), 3000);
   mainWin.on('closed', () => { mainWin = null; });
 }
 
-// 舞台 1088×754 的宽高比，窗口必须严格跟随，否则内容两侧会出现空白边界
-const STAGE_RATIO = 1088 / 754;
+// 舞台 950×650 的宽高比，窗口严格跟随，避免内容两侧出现空白边界
+const STAGE_RATIO = 950 / 650;
 const fittedWins = new WeakSet();   // 当前处于"等比铺满"状态的主窗口
 const preFit = new WeakMap();       // 铺满前的原始 bounds，用于还原
 
 // 把窗口尺寸校正到舞台比例（保持宽度，调整高度）
-function conformStage(win) {
-  try {
-    const b = win.getBounds();
-    const h = Math.round(b.width / STAGE_RATIO);
-    if (Math.abs(h - b.height) > 1) win.setBounds({ x: b.x, y: b.y, width: b.width, height: h });
-  } catch (e) { appendLog('main.log', 'ERROR', `conformStage failed: ${e.message}`); }
+function conformStage() {
+  // 1:1 自适应布局后不再需要约束窗口比例
 }
 
 // 按舞台比例铺满当前显示器工作区，并居中（替代原生最大化）
@@ -442,88 +574,25 @@ function createBrowserWindow(url, { incognito = false, isNewWindow = false, urls
     }
     return last || null;
   }
-  const win = new BrowserWindow({
-    width: 1220,
-    height: 840,
-    minWidth: 860,
-    minHeight: 600,
-    frame: false,
-    transparent: true,
-    backgroundColor: '#00000000',
-    show: false,
-    hasShadow: true,
+  // 内嵌浏览器改用 browser-shell（WebContentsView 架构，来自同事的 chrome-clone）
+  const { createShellWindow } = require('./browser-shell');
+  const win = createShellWindow({
+    startUrl: url || '',
+    startUrls: Array.isArray(urls) ? urls : null,
+    incognito,
     icon: APP_ICON_PATH,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      webviewTag: true,
-      webSecurity: true,
-    },
   });
   browserWins.add(win);
-  win.setIcon(appIcon());
   if (url) browserUrlMap.set(url, win);
-  appendLog('main.log', 'INFO', `browser window created (${url || 'blank'}, total=${browserWins.size})`);
-  // 普通窗口作为"共用标签窗口"，无痕/显式新窗口不参与复用
   if (!isNewWindow && !incognito) sharedBrowserWin = win;
+  appendLog('main.log', 'INFO', `browser window created via shell (${url || 'blank'}, total=${browserWins.size})`);
+
   win.on('closed', () => {
     appendLog('main.log', 'INFO', `browser window closed (total=${browserWins.size - 1})`);
     browserWins.delete(win);
     if (sharedBrowserWin === win) sharedBrowserWin = null;
     if (url && browserUrlMap.get(url) === win) browserUrlMap.delete(url);
   });
-
-  // 内嵌 webview：接管 window.open，转发常用快捷键
-  // will-attach-webview 统一收口安全参数：只允许内置 guest-preload，禁 Node，强制上下文隔离
-  win.webContents.on('will-attach-webview', (event, webPreferences, params) => {
-    try {
-      webPreferences.preload = path.join(__dirname, 'guest-preload.js');
-      webPreferences.nodeIntegration = false;
-      webPreferences.contextIsolation = true;
-      delete webPreferences.preloadURL;
-      const src = String((params && params.src) || '');
-      // 只允许常规网页协议，挡掉 intent:/javascript: 之类注入面
-      if (src && !/^(https?:|about:|view-source:|data:|file:)/i.test(src)) event.preventDefault();
-    } catch (e) {
-      appendLog('main.log', 'WARN', `will-attach-webview failed: ${e.message}`);
-    }
-  });
-  win.webContents.on('did-attach-webview', (event, wc) => {
-    wc.setWindowOpenHandler(({ url }) => {
-      try { openInSharedBrowser(url); } catch {}
-      return { action: 'deny' };
-    });
-    // 页面内触发的跳转（点击链接 / location 赋值）只放行安全协议
-    wc.on('will-navigate', (ev, url) => {
-      const u = String(url || '');
-      if (!/^(https?:|about:|view-source:|data:|file:|blob:)/i.test(u)) {
-        ev.preventDefault();
-        appendLog('main.log', 'WARN', `blocked navigation: ${u.slice(0, 80)}`);
-      }
-    });
-    wc.on('before-input-event', (ev, input) => {
-      if (input.type !== 'keyDown') return;
-      if (!(input.control || input.meta)) return;
-      const key = String(input.key || '').toLowerCase();
-      const allowed = ['t', 'w', 'r', 'l', 'f', 'j', 'p', 'n', 'tab', 'a'];
-      const isDel = key === 'delete' && input.shift;
-      if (!allowed.includes(key) && !isDel) return;
-      ev.preventDefault();
-      if (!win.isDestroyed()) {
-        win.webContents.send('browser:key', { key: isDel ? 'shift+del' : key, shift: !!input.shift });
-      }
-    });
-  });
-
-  const q = new URLSearchParams();
-  if (url) q.set('url', url);
-  if (Array.isArray(urls) && urls.length) q.set('urls', urls.join('|'));
-  if (incognito) q.set('incognito', '1');
-  if (isNewWindow) q.set('shell', '1');
-  win.loadFile(path.join(__dirname, 'browser.html'), { query: Object.fromEntries(q) });
-  win.once('ready-to-show', () => win.show());
   return win;
 }
 
@@ -546,7 +615,7 @@ function openInSharedBrowser(input) {
     if (!w.isVisible()) w.show();
     w.focus();
     if (!list.length) return w;
-    const send = (u) => { try { w.webContents.send('browser:addTab', { url: u }); } catch { /* 窗口已关闭 */ } };
+    const send = (u) => { try { w.webContents.send('shell:addTab', { url: u }); } catch { /* 窗口已关闭 */ } };
     appendLog('main.log', 'INFO', `shared browser: add ${list.length} tab(s)`);
     for (const u of list) {
       if (w.webContents.isLoading()) w.webContents.once('did-finish-load', () => send(u));
@@ -701,28 +770,113 @@ async function fetchFeedSource(feed) {
   }
 }
 
-// ---------- 自动更新（B1） ----------
-let updaterMod = null;
-function getUpdater() {
-  if (updaterMod !== null) return updaterMod;
-  try {
-    updaterMod = require('electron-updater').autoUpdater;
-    updaterMod.autoDownload = false;
-    updaterMod.autoInstallOnAppQuit = true;
-    updaterMod.on('error', (err) => appendLog('main.log', 'WARN', `updater error: ${err?.message || err}`));
-  } catch (e) {
-    updaterMod = false;
-    appendLog('main.log', 'WARN', `electron-updater unavailable: ${e.message}`);
+// ---------- 自动更新（自己实现，Worker KV 托管版本元数据，GitHub Release 存安装包） ----------
+const UPDATE_API = 'https://api.myanywhere.fun/version';
+
+function parseSemver(v) {
+  const m = String(v || '').match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!m) return [0, 0, 0];
+  return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+}
+function compareVersions(a, b) {
+  // 返回正数说明 a > b，0 说明相等，负数说明 a < b
+  const A = parseSemver(a), B = parseSemver(b);
+  for (let i = 0; i < 3; i++) {
+    if (A[i] !== B[i]) return A[i] - B[i];
   }
-  return updaterMod || null;
+  return 0;
 }
 
-function hasUpdateConfig() {
-  try { return fs.existsSync(path.join(process.resourcesPath, 'app-update.yml')); } catch { return false; }
+let updateDownloadTask = null; // { url, savePath, cancel() }
+let installPending = false;
+
+async function fetchVersionInfo() {
+  const resp = await fetch(UPDATE_API, { signal: AbortSignal.timeout(10000) });
+  if (!resp.ok) throw new Error(`Worker /version HTTP ${resp.status}`);
+  const data = await resp.json();
+  if (!data?.ok) throw new Error(data?.error || 'Worker 返回异常');
+  return data;
+}
+
+function hasActiveWindow() {
+  return BrowserWindow.getAllWindows().some((w) => !w.isDestroyed());
+}
+function broadcastToRenderer(channel, payload) {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w || w.isDestroyed()) continue;
+    try { w.webContents.send(channel, payload); } catch {}
+  }
+}
+
+function downloadToFile(url, destPath, { onProgress } = {}) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    let canceled = false;
+    let lastEmit = 0;
+    const req = https.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume();
+        if (canceled) { file.close(); reject(new Error('canceled')); return; }
+        // 跟随一次重定向（GitHub 会用 302 到 CDN）
+        downloadToFile(res.headers.location, destPath, { onProgress }).then(resolve, reject);
+        return;
+      }
+      if (!res.statusCode || res.statusCode < 200 || res.statusCode >= 300) {
+        file.close();
+        fs.unlink(destPath, () => {});
+        reject(new Error(`HTTP ${res.statusCode || res.statusMessage}`));
+        return;
+      }
+      const total = parseInt(res.headers['content-length'] || '0', 10);
+      let done = 0;
+      res.on('data', (chunk) => {
+        if (canceled) { res.destroy(); file.close(); fs.unlink(destPath, () => {}); reject(new Error('canceled')); return; }
+        done += chunk.length;
+        const now = Date.now();
+        if (now - lastEmit > 150) {
+          lastEmit = now;
+          const pct = total ? Math.round((done / total) * 100) : 0;
+          const mbDone = (done / 1048576).toFixed(1);
+          const mbTotal = total ? (total / 1048576).toFixed(1) : '?';
+          try { onProgress?.({ pct, done, total, mbDone, mbTotal }); } catch {}
+        }
+      });
+      res.on('end', () => {
+        if (canceled) return;
+        file.end(() => resolve({ path: destPath, size: done }));
+      });
+      res.on('error', (err) => { file.close(); fs.unlink(destPath, () => {}); reject(err); });
+      res.pipe(file);
+    });
+    req.on('error', reject);
+    updateDownloadTask = {
+      url, savePath: destPath,
+      cancel: () => { canceled = true; try { req.destroy(); } catch {} },
+    };
+  });
+}
+
+function quitAndRunInstaller(exePath) {
+  installPending = true;
+  // spawn 安装器，detached=true + stdio='ignore' 让它在主程序退出后继续运行
+  const { spawn } = require('child_process');
+  const installer = spawn(exePath, ['--updated'], { detached: true, stdio: 'ignore' });
+  installer.unref();
+  // 等 500ms 让进程起来再退出主程序
+  setTimeout(() => {
+    try { app.exit(0); } catch {}
+  }, 500);
 }
 
 function setupIpc() {
   ipcMain.on('win:min', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
+  // 浏览器里「管理 ANYWHERE 账号」：把工作台窗口拉回前台
+  ipcMain.on('win:focus-main', () => {
+    if (!mainWin || mainWin.isDestroyed()) return;
+    if (mainWin.isMinimized()) mainWin.restore();
+    if (!mainWin.isVisible()) mainWin.show();
+    mainWin.focus();
+  });
   ipcMain.on('win:max', (e) => {
     const w = BrowserWindow.fromWebContents(e.sender);
     if (!w) return;
@@ -749,6 +903,22 @@ function setupIpc() {
     return w ? fittedWins.has(w) || w.isMaximized() : false;
   });
 
+  /* 原生窗口全屏（Chrome F11 行为） */
+  ipcMain.on('win:toggleFullscreen', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (!w) return;
+    if (w.isFullScreen()) w.setFullScreen(false);
+    else w.setFullScreen(true);
+  });
+  ipcMain.on('win:exitFullscreen', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (w && w.isFullScreen()) w.setFullScreen(false);
+  });
+  ipcMain.handle('win:isFullScreen', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender);
+    return w ? w.isFullScreen() : false;
+  });
+
   ipcMain.handle('app:info', () => ({
     version: app.getVersion(),
     platform: process.platform,
@@ -758,6 +928,17 @@ function setupIpc() {
   }));
 
   ipcMain.handle('store:get', () => readData());
+
+  // 界面字号：用 Chromium 的页面缩放实现，重排后依旧清晰（不模糊）。
+  // 小屏时窗口整体等比缩小（见 createMainWindow 的 baseZoomScale），字号档位要乘上这个系数，
+  // 保证任何屏幕上逻辑视口都是固定的（1425/1140/950 三档），布局永不重排。
+  ipcMain.handle('ui:setZoom', (e, factor) => {
+    const win = BrowserWindow.fromWebContents(e.sender);
+    const base = (win && win.baseZoomScale) || 1;
+    const f = Math.min(1.5, Math.max(0.8, Number(factor) || 1)) * base;
+    e.sender.setZoomFactor(f);
+    return f;
+  });
 
   // 翻译代理：走主进程网络栈（系统代理、无 CORS、连接复用），渲染层 fetch 易受环境影响导致翻译失败
   ipcMain.handle('tr:fetch', async (e, url, opts = {}) => {
@@ -776,6 +957,7 @@ function setupIpc() {
   });
   ipcMain.handle('store:set', (e, patch) => {
     const prevRole = (readData().profile || {}).roleId;
+    const prevUser = readData().user;
     const next = saveData(patch);
     // 职业身份切换时通知浏览器窗口刷新「职业书签栏」
     const newRole = patch && patch.profile && patch.profile.roleId;
@@ -788,11 +970,35 @@ function setupIpc() {
     if (patch && patch.settings && typeof patch.settings.blockAds === 'boolean') {
       adblockEnabled = patch.settings.blockAds;
     }
+    // 工作台修改默认搜索引擎 → 已打开的浏览器窗口即时跟随
+    const nextEngine = patch && patch.settings && patch.settings.engine;
+    if (nextEngine) {
+      browserWins.forEach((w) => {
+        try { if (!w.isDestroyed()) w.webContents.send('shell:profile', { engine: nextEngine }); } catch (er) { /* ignore */ }
+      });
+    }
+    // 工作台换壁纸 → 浏览器新标签页「跟随工作台」即时更新
+    const nextWall = patch && patch.settings && (patch.settings.wallpaper || patch.settings.wallpaperCustom);
+    if (nextWall) {
+      const wd = readData() || {};
+      const payload = {
+        wallpaper: (wd.settings && wd.settings.wallpaper) || '',
+        wallpaperCustom: (wd.settings && wd.settings.wallpaperCustom) || '',
+      };
+      browserWins.forEach((w) => {
+        try { if (!w.isDestroyed()) w.webContents.send('shell:profile', payload); } catch (er) { /* ignore */ }
+      });
+    }
     // 账号信息变化 → 通知内嵌浏览器窗口同步头像 / 昵称
     if (patch && Object.prototype.hasOwnProperty.call(patch, 'user')) {
       browserWins.forEach((w) => {
         try { if (!w.isDestroyed() && w.webContents !== e.sender) w.webContents.send('user:changed', next.user || null); } catch (er) { /* ignore */ }
       });
+      // 换了人（含退出登录）→ 内嵌浏览器的站点登录态一并清空
+      const idOf = (u) => String((u && (u.id || u.email)) || '');
+      if (idOf(prevUser) !== idOf(next.user)) {
+        clearBrowserSiteSessions(`user ${idOf(prevUser) || 'none'} -> ${idOf(next.user) || 'none'}`);
+      }
     }
     // 其他窗口写入书签 / 历史（例如云同步）→ 让浏览器窗口刷新，避免旧数据覆盖
     const BROWSER_KEYS = ['bookmarks', 'bookmarkFolders', 'history'];
@@ -811,9 +1017,38 @@ function setupIpc() {
       if (!rolesMod) {
         // 项目为 CommonJS，src 下的 ESM 数据文件无法直接 import；
         // 运行时按依赖顺序把数据文件拼成单文件 .mjs 后加载
+        // 打包后 asar 里路径结构和源码一致：app.asar/electron/main.js → ../src/data
+        const isAsar = app.isPackaged && !process.defaultApp;
         const srcDir = path.join(__dirname, '..', 'src', 'data');
-        const parts = ['sites-extra-manual.js', 'sites-extra.js', 'sites.js', 'roles.js']
-          .map((f) => fs.readFileSync(path.join(srcDir, f), 'utf8').replace(/^import[^\n]*\n/gm, ''));
+        // 裸域补 www 的 helper（和前端 sites.js domainToUrl 逻辑一致）
+        const fixDomainUrl = (d) => {
+          if (!d) return '';
+          if (d.startsWith('http')) return d;
+          const parts = d.split('.');
+          if (parts.length === 2 && parts[0] !== 'www') return `https://www.${d}`;
+          return `https://${d}`;
+        };
+        const fileList = ['sites-extra-manual.js', 'sites-extra.js', 'sites.js', 'roles.js'];
+        let parts = [];
+        for (const f of fileList) {
+          const p = path.join(srcDir, f);
+          if (!fs.existsSync(p)) {
+            if (isAsar) {
+              // asar 内的文件需要用 fs.promises.readFile + asar 虚拟路径
+              try {
+                const { readFileSync } = require('fs');
+                parts.push(readFileSync(p, 'utf8').replace(/^import[^\n]*\n/gm, ''));
+                continue;
+              } catch (e) {
+                appendLog('main.log', 'WARN', `role:sites read ${f} from asar failed: ${e.message}`);
+              }
+            }
+            appendLog('main.log', 'WARN', `role:sites skip missing file: ${f}`);
+            continue;
+          }
+          parts.push(fs.readFileSync(p, 'utf8').replace(/^import[^\n]*\n/gm, ''));
+        }
+        if (!parts.length) throw new Error('all src/data files missing');
         const outDir = path.join(app.getPath('userData'), 'runtime');
         fs.mkdirSync(outDir, { recursive: true });
         const outFile = path.join(outDir, 'roles-runtime.mjs');
@@ -827,7 +1062,10 @@ function setupIpc() {
       const sites = rolesMod.roleTabSites(roleId, 'general', 14, customRoles) || [];
       return {
         roleName: role ? role.name : '',
-        sites: sites.map((s) => ({ name: s.name, url: s.url || `https://${s.domain}` })),
+        sites: sites.map((s) => ({
+          name: s.name,
+          url: s.url ? (s.url.startsWith('http') ? s.url : `https://${s.url}`) : fixDomainUrl(s.domain),
+        })),
       };
     } catch (err) {
       appendLog('main.log', 'ERROR', `role:sites failed: ${err.message}`);
@@ -963,51 +1201,139 @@ function setupIpc() {
     };
   });
 
-  /* ---------- 自动更新 ---------- */
+  /* ---------- 自动更新（Worker KV + GitHub Release） ---------- */
   ipcMain.handle('update:check', async () => {
-    if (process.defaultApp || !hasUpdateConfig()) {
-      return { ok: false, status: 'dev', message: '当前为开发运行版本，自动更新只在安装包中生效', version: app.getVersion() };
-    }
-    const up = getUpdater();
-    if (!up) return { ok: false, status: 'unavailable', message: '更新组件未安装', version: app.getVersion() };
+    const current = app.getVersion();
     try {
-      const r = await up.checkForUpdates();
-      const latest = r && r.updateInfo ? r.updateInfo.version : '';
-      const hasUpdate = !!latest && latest !== app.getVersion();
-      return { ok: true, status: hasUpdate ? 'available' : 'latest', latest, version: app.getVersion() };
+      const info = await fetchVersionInfo();
+      const latest = info.version;
+      const cmp = compareVersions(latest, current);
+      const notes = info.notes ? String(info.notes).slice(0, 2000) : '';
+      const url = info.url || '';
+      const date = info.date || '';
+      const minVersion = info.minVersion || '0';
+      return {
+        ok: true,
+        status: cmp > 0 ? 'available' : cmp === 0 ? 'latest' : 'older',
+        version: current,
+        latest, notes, url, date, minVersion,
+      };
     } catch (err) {
       appendLog('main.log', 'WARN', `update check failed: ${err?.message || err}`);
-      return { ok: false, status: 'error', message: String(err?.message || err), version: app.getVersion() };
+      return {
+        ok: false, status: 'error',
+        message: String(err?.message || err),
+        version: current,
+      };
     }
   });
 
-  ipcMain.handle('update:install', async () => {
-    if (process.defaultApp || !hasUpdateConfig()) return { ok: false, status: 'dev', message: '开发版本不支持自动安装' };
-    const up = getUpdater();
-    if (!up) return { ok: false, status: 'unavailable', message: '更新组件未安装' };
+  ipcMain.handle('update:download', async () => {
+    const current = app.getVersion();
     try {
-      const r = await up.checkForUpdates();
-      const latest = r && r.updateInfo ? r.updateInfo.version : '';
-      if (!latest || latest === app.getVersion()) return { ok: false, status: 'latest', message: '已是最新版本' };
-      await up.downloadUpdate();
-      up.quitAndInstall();
-      return { ok: true, status: 'installing', latest };
+      const info = await fetchVersionInfo();
+      const latest = info.version;
+      const url = info.url;
+      if (!url) return { ok: false, error: 'Worker 未返回安装包 URL，请先 push-version' };
+      if (compareVersions(latest, current) <= 0) return { ok: false, error: '已是最新版本' };
+
+      const tmpDir = app.getPath('temp');
+      const destPath = path.join(tmpDir, `anywhere-setup-${latest}.exe`);
+      fs.mkdirSync(path.dirname(destPath), { recursive: true });
+      if (fs.existsSync(destPath)) {
+        try { fs.unlinkSync(destPath); } catch {}
+      }
+
+      appendLog('main.log', 'INFO', `update download start: ${url} -> ${destPath}`);
+
+      await downloadToFile(url, destPath, {
+        onProgress: (p) => broadcastToRenderer('update:progress', p),
+      });
+      updateDownloadTask = null;
+
+      // 完整性校验：Worker 下发的 size 必须与实际下载字节数一致，否则视为截断损坏
+      const expected = Number(info.size || 0);
+      const actual = fs.statSync(destPath).size;
+      if (expected > 0 && actual !== expected) {
+        try { fs.unlinkSync(destPath); } catch {}
+        throw new Error(`安装包下载不完整（${actual}/${expected} 字节），请重试`);
+      }
+
+      broadcastToRenderer('update:progress', { pct: 100, done: 1, total: 1 });
+      broadcastToRenderer('update:downloaded', { path: destPath, version: latest });
+      return { ok: true, path: destPath, version: latest };
     } catch (err) {
-      return { ok: false, status: 'error', message: String(err?.message || err) };
+      appendLog('main.log', 'WARN', `update download failed: ${err?.message || err}`);
+      updateDownloadTask = null;
+      broadcastToRenderer('update:error', { message: String(err?.message || err) });
+      return { ok: false, error: String(err?.message || err) };
     }
   });
+
+  ipcMain.handle('update:cancel', async () => {
+    try { updateDownloadTask?.cancel?.(); } catch {}
+    updateDownloadTask = null;
+    return { ok: true };
+  });
+
+  ipcMain.handle('update:install', async (_e, payload) => {
+    // payload 可以是 { path: '本地 setup.exe 路径' } 或空（用上次下载的）
+    const installPath = typeof payload === 'string' ? payload : payload?.path;
+    if (!installPath || !fs.existsSync(installPath)) {
+      return { ok: false, error: '安装包不存在，请先下载' };
+    }
+    if (installPending) return { ok: false, error: '已有安装在进行中' };
+    appendLog('main.log', 'INFO', `update installing: ${installPath}`);
+    try {
+      quitAndRunInstaller(installPath);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: String(err?.message || err) };
+    }
+  });
+
+  ipcMain.handle('update:autoupdate', (_e, enabled) => {
+    try {
+      const data = readData();
+      data.settings = data.settings || {};
+      data.settings.autoUpdate = !!enabled;
+      writeData(data);
+      return { ok: true, autoUpdate: !!enabled };
+    } catch { return { ok: false }; }
+  });
+
+  // 启动后静默检查一次更新（仅已安装版 + 用户没关自动更新）
+  if (!process.defaultApp && app.isPackaged) {
+    setTimeout(async () => {
+      try {
+        const auto = !!readData().settings?.autoUpdate;
+        if (!auto) return;
+        appendLog('main.log', 'INFO', 'background update check start');
+        const info = await fetchVersionInfo();
+        const cmp = compareVersions(info.version, app.getVersion());
+        appendLog('main.log', 'INFO', `background update check result: latest=${info.version} current=${app.getVersion()} cmp=${cmp}`);
+        if (cmp > 0 && hasActiveWindow()) {
+          broadcastToRenderer('update:available', { version: info.version, notes: info.notes || '', url: info.url || '' });
+        }
+      } catch (err) {
+        appendLog('main.log', 'WARN', `background update check failed: ${err?.message || err}`);
+      }
+    }, 30000); // 启动 30 秒后再查，别跟主程序抢首屏
+  }
 
   ipcMain.handle('adblock:get', () => ({ enabled: adblockEnabled, hosts: AD_HOSTS.length }));
 
   ipcMain.handle('adblock:set', (e, on) => ({ enabled: applyAdblock(on) }));
 
-  /* ---------- 浏览器：guest 页 preload 路径（Alt 存图用） ---------- */
-  ipcMain.handle('guest:preloadPath', () => path.join(__dirname, 'guest-preload.js'));
+  /* ---------- 浏览器：guest 页 preload 由 browser-shell 负责 ---------- */
 
   /* ---------- 密码与自动填充 ---------- */
-  ipcMain.handle('creds:list', () => readCreds().map(credPublic));
+  // 未登录（离线）状态下已保存的密码一律隐藏：既不列出来也不自动填充，
+  // 避免同机下一个人直接看到 / 使用上一个账号保存的网站密码。
+  ipcMain.handle('creds:list', () => (readData().user ? readCreds().map(credPublic) : []));
 
   ipcMain.handle('creds:save', (e, payload) => {
+    if (!readData().user) return { ok: false, error: '请先在主窗口登录账号，再保存密码' };
     const site = String(payload?.site || '').trim();
     const username = String(payload?.username || '').trim();
     const password = String(payload?.password || '');
@@ -1038,6 +1364,7 @@ function setupIpc() {
 
   // 按页面 origin 返回可自动填充的账号（密码仅在内存中解密后传给渲染进程）
   ipcMain.handle('creds:match', (e, origin) => {
+    if (!readData().user) return [];
     const target = normalizeOrigin(origin);
     if (!target) return [];
     const out = [];
@@ -1290,7 +1617,6 @@ function setupIpc() {
   });
 
   ipcMain.handle('browser:isDefault', () => {
-    // Windows 没有可靠的"我是否是默认浏览器"查询 API，这里只判断协议是否已注册到本程序
     try {
       return {
         http: app.isDefaultProtocolClient('http'),
@@ -1300,6 +1626,7 @@ function setupIpc() {
       return { http: false, https: false };
     }
   });
+
 
   ipcMain.handle('dialog:pickWallpaper', async () => {
     const r = await dialog.showOpenDialog(mainWin, {
@@ -1373,28 +1700,46 @@ function setupIpc() {
     const results = [];
     const concurrency = 6;
     let cursor = 0;
-    async function checkOne(site) {
-      const started = Date.now();
+    // 单次探测；HEAD 被站点拒绝（403/405/429/501）时用 GET + Range 复核，减少误判
+    function probe(site, method, timeoutMs) {
       return new Promise((resolve) => {
         let settled = false;
         const done = (r) => { if (!settled) { settled = true; resolve(r); } };
         try {
-          const req = net.request({ method: 'HEAD', url: site.url, redirect: 'follow' });
+          const req = net.request({ method, url: site.url, redirect: 'follow' });
           req.setHeader('User-Agent', 'Mozilla/5.0 ANYWHERE/1.0');
-          const timer = setTimeout(() => { try { req.abort(); } catch {} done({ ...site, ok: false, status: 0, ms: Date.now() - started, error: 'timeout' }); }, 9000);
+          req.setHeader('Accept', '*/*');
+          if (method === 'GET') req.setHeader('Range', 'bytes=0-0');
+          const timer = setTimeout(() => {
+            try { req.abort(); } catch {}
+            done({ status: 0, error: 'timeout' });
+          }, timeoutMs);
           req.on('response', (res) => {
             clearTimeout(timer);
-            done({ ...site, ok: res.statusCode < 400, status: res.statusCode, ms: Date.now() - started, error: null });
+            try { res.resume(); } catch {}
+            done({ status: res.statusCode, error: null });
           });
           req.on('error', (err) => {
             clearTimeout(timer);
-            done({ ...site, ok: false, status: 0, ms: Date.now() - started, error: err.message || 'error' });
+            done({ status: 0, error: err.message || 'error' });
           });
           req.end();
         } catch (err) {
-          done({ ...site, ok: false, status: 0, ms: Date.now() - started, error: err.message });
+          done({ status: 0, error: err.message });
         }
       });
+    }
+
+    async function checkOne(site) {
+      const started = Date.now();
+      let r = await probe(site, 'HEAD', 6000);
+      if (r.status === 0 || r.status === 403 || r.status === 405 || r.status === 429 || r.status === 501) {
+        const retry = await probe(site, 'GET', 9000);
+        if (retry.status && retry.status < 400) r = retry;
+        else if (!r.status && retry.status) r = retry;
+      }
+      const ok = r.status > 0 && r.status < 400;
+      return { ...site, ok, status: r.status, ms: Date.now() - started, error: ok ? null : (r.error || `http ${r.status}`) };
     }
     async function worker() {
       while (cursor < list.length) {
@@ -1445,22 +1790,101 @@ function setupIpc() {
     });
   });
 
-  ipcMain.handle('geo:locate', async () => {
+  // 区/县 → 坐标：Open-Meteo 没有区级数据，用 OSM Nominatim 按「市+区」解析
+  ipcMain.handle('geo:district', async (e, { city, district } = {}) => {
+    const q = `${city || ''}${district || ''}`.replace(/\s/g, '');
+    if (!district) return { ok: false };
     return new Promise((resolve) => {
-      const req = https.get('https://ipapi.co/json/', { headers: { 'User-Agent': 'ANYWHERE/1.0' } }, (res) => {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=zh`;
+      const req = https.get(url, { headers: { 'User-Agent': 'ANYWHERE/1.0' } }, (res) => {
         let body = '';
         res.on('data', (c) => (body += c));
         res.on('end', () => {
           try {
             const d = JSON.parse(body);
-            if (d && d.latitude) resolve({ ok: true, city: d.city, region: d.region, country: d.country_name, latitude: d.latitude, longitude: d.longitude });
+            const r = Array.isArray(d) ? d[0] : null;
+            if (r?.lat && r?.lon) resolve({ ok: true, latitude: Number(r.lat), longitude: Number(r.lon) });
             else resolve({ ok: false });
           } catch { resolve({ ok: false }); }
         });
       });
-      req.setTimeout(7000, () => { req.destroy(); resolve({ ok: false }); });
+      req.setTimeout(9000, () => { req.destroy(); resolve({ ok: false }); });
       req.on('error', () => resolve({ ok: false }));
     });
+  });
+
+  ipcMain.handle('geo:locate', async () => {
+    const fetchJson = (url) => new Promise((resolve) => {
+      const mod = url.startsWith('https') ? https : require('http');
+      let settled = false;
+      const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+      try {
+        const req = mod.get(url, { headers: { 'User-Agent': 'ANYWHERE/1.0' } }, (res) => {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => {
+            try { done(JSON.parse(body)); } catch { done(null); }
+          });
+        });
+        req.setTimeout(6000, () => { req.destroy(); done(null); });
+        req.on('error', () => done(null));
+      } catch { done(null); }
+    });
+
+    // 城市名 → 坐标（天气接口只认经纬度）。Open-Meteo 只有城市级，
+    // 而且「杭州市」这种带行政后缀的名字查不到，去掉后缀再试一次。
+    const geocodeCity = async (name) => {
+      const variants = [name, String(name || '').replace(/[市区县旗盟]$/, '')].filter(Boolean);
+      for (const v of variants) {
+        const d = await fetchJson(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(v)}&count=1&language=zh&format=json`);
+        const r = d?.results?.[0];
+        if (r) return { latitude: r.latitude, longitude: r.longitude };
+      }
+      return null;
+    };
+
+    // 区县坐标：Open-Meteo 没有区级数据，改用 OSM Nominatim 按「省+市+区」精确解析
+    const geocodeDistrict = async (region, city, district) => {
+      if (!district) return null;
+      const q = `${region || ''}${city || ''}${district}`.replace(/\s/g, '');
+      const d = await fetchJson(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1&accept-language=zh`);
+      const r = Array.isArray(d) ? d[0] : null;
+      const lat = Number(r?.lat);
+      const lon = Number(r?.lon);
+      return Number.isFinite(lat) && Number.isFinite(lon) ? { latitude: lat, longitude: lon } : null;
+    };
+
+    // 优先用国内源：ipip.net 走直连，能看到真实省市；
+    // 国外 IP 服务容易被系统代理/VPN 带到境外出口（比如把杭州识别成拉斯维加斯）。
+    const ipip = await fetchJson('https://myip.ipip.net/json');
+    if (ipip?.ret === 'ok') {
+      const loc = ipip.data?.location || [];
+      const country = loc[0] || '';
+      const region = loc[1] || '';
+      const city = loc[2] || region;
+      const district = loc[3] || '';
+      if (city) {
+        // 有区县就按「省+市+区」查区级坐标，天气能落到区一级；查不到退回城市
+        const coords = (await geocodeDistrict(region, city, district)) || (await geocodeCity(city));
+        if (coords) return { ok: true, city, district, region, country, ...coords };
+        return { ok: true, city, district, region, country, latitude: null, longitude: null };
+      }
+    }
+
+    const sources = [
+      { url: 'https://api.ip.sb/geoip', pick: (d) => ({ city: d.city, region: d.region, country: d.country, latitude: d.latitude, longitude: d.longitude }) },
+      { url: 'https://ipapi.co/json/', pick: (d) => ({ city: d.city, region: d.region, country: d.country_name, latitude: d.latitude, longitude: d.longitude }) },
+      {
+        url: 'http://ip-api.com/json/?lang=zh-CN&fields=status,city,regionName,country,lat,lon',
+        pick: (d) => (d.status === 'success' ? { city: d.city, region: d.regionName, country: d.country, latitude: d.lat, longitude: d.lon } : null),
+      },
+    ];
+    for (const s of sources) {
+      const d = await fetchJson(s.url);
+      const r = d ? s.pick(d) : null;
+      if (r && r.latitude) return { ok: true, ...r };
+    }
+    return { ok: false };
   });
 
   ipcMain.handle('ai:chat', async (e, payload) => {
@@ -1682,9 +2106,13 @@ if (!gotLock) {
 } else {
   appendLog('main.log', 'INFO', `app boot: packaged=${app.isPackaged} defaultApp=${!!process.defaultApp} version=${app.getVersion()}`);
   app.on('second-instance', (_e, argv) => {
-    if (mainWin) {
+    if (mainWin && !mainWin.isDestroyed()) {
       if (mainWin.isMinimized()) mainWin.restore();
+      // 窗口可能因为首帧未触发而一直隐藏着；再点一次图标必须能把它叫出来
+      if (!mainWin.isVisible()) mainWin.show();
       mainWin.focus();
+    } else {
+      createMainWindow();
     }
     // 外部程序（飞书/微信等）通过默认浏览器打开链接 → argv 里带 URL
     const url = extractUrlFromArgv(argv);
@@ -1704,12 +2132,54 @@ if (!gotLock) {
       app.setAsDefaultProtocolClient('http');
       app.setAsDefaultProtocolClient('https');
     } catch {}
+
+    // 先做运行库自检：缺文件时直接弹原生提示，而不是给用户一个黑窗口
+    const missing = missingRuntimeFiles();
+    if (missing.length) {
+      appendLog('main.log', 'FATAL', `missing runtime files: ${missing.join(' | ')}`);
+      reportMissingRuntime(missing);
+    }
+    if (safeMode) appendLog('main.log', 'WARN', 'safe mode: hardware acceleration disabled');
+
     setupIpc();
+
+    // 内嵌浏览器外壳（同事的 chrome-clone / WebContentsView 架构）
+    const shell = require('./browser-shell');
+    shell.setProfileProvider(() => {
+      const d = readData() || {};
+      return {
+        user: d.user || null,
+        profile: d.profile || null,
+        engine: (d.settings && d.settings.engine) || '',
+        wallpaper: (d.settings && d.settings.wallpaper) || '',
+        wallpaperCustom: (d.settings && d.settings.wallpaperCustom) || '',
+        browserBookmarks: Array.isArray(d.browserBookmarks) ? d.browserBookmarks : [],
+        browserHistory: Array.isArray(d.browserHistory) ? d.browserHistory : [],
+      };
+    });
+    // 浏览器下载目录跟随工作台设置（设置 → 下载内容）
+    shell.setDownloadDirProvider(() => {
+      const d = readData() || {};
+      return (d.settings && d.settings.browser && d.settings.browser.downloadDir) || '';
+    });
+    shell.setNewWindowHandler((opts) => createBrowserWindow((opts && opts.url) || '', {
+      isNewWindow: true,
+      incognito: !!(opts && opts.incognito),
+    }));
+    appendLog('main.log', 'INFO', 'browser shell registered');
+    // 未登录启动时先清一次内嵌浏览器的站点登录态（cookie / localStorage），
+    // 保证「跳过登录」的工作台里看不到任何网站的已登录状态。
+    if (!readData().user) {
+      clearBrowserSiteSessions('startup logged-out').catch(() => {});
+    }
+    // 先把窗口建出来：后面的扩展加载 / 广告拦截 / 下载监听任何一步卡住，
+    // 都不能影响用户看到主界面。
+    createMainWindow();
+    appendLog('main.log', 'INFO', 'main window created');
     applyDownloadDir(readData().settings?.browser?.downloadDir);
     setupAdblock();
     setupDownloads();
     try { await loadSavedExtensions(); } catch (e) { appendLog('main.log', 'ERROR', `load extensions failed: ${e.message}`); }
-    createMainWindow();
     registerHotkeys();
     // 首次启动时如果命令行带 URL（被设为默认浏览器后从外部点开链接），在内嵌浏览器打开
     const initialUrl = extractUrlFromArgv(process.argv);
@@ -1717,10 +2187,10 @@ if (!gotLock) {
       appendLog('main.log', 'INFO', `initial open url: ${initialUrl}`);
       setTimeout(() => openInSharedBrowser(initialUrl), 1200);
     }
-    // 安装包环境：启动后静默检查一次更新（失败只记日志，不打扰用户）
-    if (!process.defaultApp && hasUpdateConfig()) {
-      setTimeout(() => { try { getUpdater()?.checkForUpdates().catch(() => {}); } catch {} }, 8000);
-    }
+    // 安装包环境：启动后静默检查一次更新（已禁用 — electron-updater 已移除）
+    // if (!process.defaultApp && hasUpdateConfig()) {
+    //   setTimeout(() => { try { getUpdater()?.checkForUpdates().catch(() => {}); } catch {} }, 8000);
+    // }
   });
 }
 
