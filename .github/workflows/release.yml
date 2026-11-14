@@ -1,6 +1,6 @@
 # ANYWHERE Release Workflow
 #
-# 触发方式：推送 git tag（形如 v1.0.0），或在 Actions 页面手动运行
+# 触发方式：推送 git tag（形如 v1.1.7），或在 Actions 页面手动运行
 # 流程：构建 Windows NSIS 安装包 →（可选）SignPath 签名 → 重算 latest.yml → 发布 GitHub Release
 #
 # 自动更新：客户端从 GitHub Releases 读取 latest.yml（electron-updater github provider），
@@ -8,10 +8,11 @@
 #
 # 签名是可选的：没有配置 Secret 时自动跳过，直接发布未签名安装包。
 # SignPath Foundation 申请通过后，在仓库 Settings → Secrets and variables → Actions 添加：
-#   SIGNPATH_API_TOKEN        — SignPath 控制台的 CI API Token
-#   SIGNPATH_ORGANIZATION_ID  — SignPath 组织 UUID
-#   SIGNPATH_PROJECT_SLUG     — SignPath 项目 slug
-#   SIGNPATH_SIGNING_POLICY   — 先用 test-signing 测试，上线时改成 release-signing
+#   SIGNPATH_API_TOKEN          — SignPath 控制台的 CI API Token
+#   SIGNPATH_ORGANIZATION_ID    — SignPath 组织 UUID
+#   SIGNPATH_PROJECT_SLUG       — SignPath 项目 slug
+#   SIGNPATH_SIGNING_POLICY     — 先用 test-signing 测试，上线时改成 release-signing
+#   SIGNPATH_ARTIFACT_CONFIG    — SignPath 产物配置 slug（在控制台创建，用于指定要签哪个文件）
 
 name: Release
 
@@ -42,12 +43,24 @@ jobs:
         run: npm ci
 
       - name: 构建 Windows 安装包
+        shell: pwsh
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           npm run dist:ci
+          if ($LASTEXITCODE -ne 0) { Write-Error "构建失败"; exit 1 }
           if (-not (Test-Path release/anywhere-setup.exe)) { Write-Error "未找到 NSIS 安装包"; exit 1 }
           if (-not (Test-Path release/latest.yml)) { Write-Error "未找到 latest.yml"; exit 1 }
+
+      - name: 上传待签名产物
+        id: upload-unsigned
+        if: ${{ env.SIGNPATH_API_TOKEN != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: release/anywhere-setup.exe
+          if-no-files-found: error
+          retention-days: 1
 
       - name: 提交给 SignPath 签名（未配置时跳过）
         id: sign
@@ -57,22 +70,19 @@ jobs:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
-          signing-policy: ${{ secrets.SIGNPATH_SIGNING_POLICY }}
-          artifact-config: |
-            [{
-              "path": "release/anywhere-setup.exe",
-              "signNextBuild": true,
-              "description": "ANYWHERE Windows NSIS installer"
-            }]
+          signing-policy-slug: ${{ secrets.SIGNPATH_SIGNING_POLICY }}
+          artifact-configuration-slug: ${{ secrets.SIGNPATH_ARTIFACT_CONFIG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
           wait-for-completion: true
-          max-wait: 1200
-          output-directory: signed
+          wait-for-completion-timeout-in-seconds: 1200
+          output-artifact-directory: signed
 
       - name: 使用已签名安装包并重算 latest.yml
         if: ${{ env.SIGNPATH_API_TOKEN != '' }}
-        shell: bash
+        shell: pwsh
         run: |
-          cp signed/anywhere-setup.exe release/anywhere-setup.exe
+          if (-not (Test-Path signed/anywhere-setup.exe)) { Write-Error "未取到已签名安装包"; exit 1 }
+          Copy-Item signed/anywhere-setup.exe release/anywhere-setup.exe -Force
           node scripts/postsign-latest.mjs release/latest.yml release/anywhere-setup.exe
 
       - name: 创建 GitHub Release
@@ -84,8 +94,8 @@ jobs:
 
             MIT 许可证 · 内嵌浏览器 · 素材库 · 内容流 · 跨站搜索矩阵
 
-            **安装说明**：安装包暂未做代码签名，Windows 可能提示「未知发布者」，
-            点击「更多信息」→「仍要运行」即可。
+            **安装说明**：安装包由 GitHub Actions 从源码构建发布。
+            若 Windows 提示「未知发布者」，点击「更多信息」→「仍要运行」即可。
           files: |
             release/anywhere-setup.exe
             release/latest.yml
