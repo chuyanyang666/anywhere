@@ -37,6 +37,7 @@ sites-categorized.html
 wrangler.toml
 tools/
 scripts/.tmp/
+scripts/shots/
 *.png
 # 应用图标需要提交（打包与窗口都依赖它）
 !build/icon.png
